@@ -90,6 +90,18 @@ def _render_tide_card(card: TideCard, metric: bool) -> str:
     highest_html = "".join(_render_tide_entry(t, metric) for t in card.highest_tides)
     lowest_html = "".join(_render_tide_entry(t, metric) for t in card.lowest_tides)
 
+    highest_limited_msg = ""
+    if card.highest_count_limited:
+        count = len(card.highest_tides)
+        suffix = "s" if count != 1 else ""
+        highest_limited_msg = f'<p class="limited-msg">Only {count} tide{suffix} match filter</p>'
+
+    lowest_limited_msg = ""
+    if card.lowest_count_limited:
+        count = len(card.lowest_tides)
+        suffix = "s" if count != 1 else ""
+        lowest_limited_msg = f'<p class="limited-msg">Only {count} tide{suffix} match filter</p>'
+
     return f"""
         <div class="tide-card">
             <h2>{card.period_days} Day Forecast</h2>
@@ -97,34 +109,41 @@ def _render_tide_card(card: TideCard, metric: bool) -> str:
                 <div class="tide-column">
                     <h3>Highest Tides</h3>
                     {highest_html}
+                    {highest_limited_msg}
                 </div>
                 <div class="tide-column">
                     <h3>Lowest Tides</h3>
                     {lowest_html}
+                    {lowest_limited_msg}
                 </div>
             </div>
         </div>
     """
 
 
-@app.post("/refresh-tides")
-async def refresh_tides() -> dict[str, str]:
-    """Force refresh the tide cache. Called by scheduled job."""
-    await get_tide_cards(force_refresh=True)
-    return {"status": "ok", "message": "Tide cache refreshed"}
-
-
 @app.get("/tides", response_class=HTMLResponse)
-async def tide_dashboard(units: str = Query("imperial")) -> str:
+async def tide_dashboard(
+    units: str = Query("imperial"),
+    work_filter: str = Query("on"),
+) -> str:
     """Tide dashboard showing highest and lowest daylight tides."""
     metric = units.lower() == "metric"
-    cards = await get_tide_cards()
+    work_filter_on = work_filter.lower() == "on"
+    cards = await get_tide_cards(work_filter=work_filter_on)
 
     cards_html = "".join(_render_tide_card(card, metric) for card in cards)
 
-    toggle_url = "/tides?units=metric" if not metric else "/tides?units=imperial"
-    toggle_text = "Switch to Metric" if not metric else "Switch to Imperial"
+    # Build URLs preserving other parameters
+    work_param = "on" if work_filter_on else "off"
+    units_param = "metric" if metric else "imperial"
+
+    units_toggle_url = f"/tides?units={'metric' if not metric else 'imperial'}&work_filter={work_param}"
+    units_toggle_text = "Switch to Metric" if not metric else "Switch to Imperial"
     current_units = "m" if metric else "ft"
+
+    work_toggle_url = f"/tides?units={units_param}&work_filter={'off' if work_filter_on else 'on'}"
+    work_toggle_text = "Show All Daylight" if work_filter_on else "Outside Work Hours Only"
+    work_filter_status = "Outside work hours" if work_filter_on else "All daylight"
 
     return f"""
     <!DOCTYPE html>
@@ -154,6 +173,13 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
                 border-radius: 5px;
                 cursor: pointer;
                 text-decoration: none;
+                margin-right: 5px;
+            }}
+            .limited-msg {{
+                color: #888;
+                font-size: 12px;
+                font-style: italic;
+                margin-top: 10px;
             }}
             .unit-label {{
                 margin-left: 10px;
@@ -244,8 +270,10 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
         <p>Top 3 highest and lowest tides during daylight hours</p>
 
         <div class="controls">
-            <a href="{toggle_url}" class="toggle-btn">{toggle_text}</a>
+            <a href="{units_toggle_url}" class="toggle-btn">{units_toggle_text}</a>
             <span class="unit-label">Current: {current_units}</span>
+            <a href="{work_toggle_url}" class="toggle-btn">{work_toggle_text}</a>
+            <span class="unit-label">Filter: {work_filter_status}</span>
         </div>
 
         <div class="tide-cards">

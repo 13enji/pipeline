@@ -39,6 +39,31 @@ class TideCard:
     period_days: int
     highest_tides: list[ProcessedTide]
     lowest_tides: list[ProcessedTide]
+    highest_count_limited: bool = False  # True if fewer than requested tides found
+    lowest_count_limited: bool = False  # True if fewer than requested tides found
+
+
+def is_outside_work_hours(dt: datetime) -> bool:
+    """
+    Check if a datetime is outside standard work hours (M-F 9am-5pm).
+
+    Returns True if:
+    - It's a weekend (Saturday=5, Sunday=6)
+    - It's a weekday but before 9am or at/after 5pm
+    """
+    # Make timezone-aware if needed
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=LA_JOLLA_TZ)
+
+    weekday = dt.weekday()  # Monday=0, Sunday=6
+    hour = dt.hour
+
+    # Weekend - always outside work hours
+    if weekday >= 5:
+        return True
+
+    # Weekday - check if before 9am or at/after 5pm
+    return hour < 9 or hour >= 17
 
 
 def _format_date(dt: datetime) -> str:
@@ -122,6 +147,7 @@ def get_top_tides(
     count: int = 3,
     days: int | None = None,
     start_date: datetime | None = None,
+    work_filter: bool = False,
 ) -> list[ProcessedTide]:
     """
     Get top N highest or lowest tides.
@@ -132,6 +158,7 @@ def get_top_tides(
         count: Number of tides to return
         days: Filter to only tides within this many days
         start_date: Start date for the days filter
+        work_filter: If True, only include tides outside M-F 9am-5pm
 
     Returns:
         List of ProcessedTide objects, sorted by height (desc for high, asc for low)
@@ -154,6 +181,10 @@ def get_top_tides(
             if not (start_date <= pred_time <= end_date):
                 continue
 
+        # Apply work hours filter if enabled
+        if work_filter and not is_outside_work_hours(pred.time):
+            continue
+
         filtered.append((pred, daylight))
 
     # Sort by height (descending for high tides, ascending for low tides)
@@ -165,12 +196,16 @@ def get_top_tides(
     return [_process_tide(pred, daylight) for pred, daylight in filtered[:count]]
 
 
-async def get_tide_cards(start_date: datetime | None = None) -> list[TideCard]:
+async def get_tide_cards(
+    start_date: datetime | None = None,
+    work_filter: bool = True,
+) -> list[TideCard]:
     """
     Get tide cards for 30, 60, and 90 day periods.
 
     Args:
         start_date: Start date for predictions (defaults to now)
+        work_filter: If True (default), only include tides outside M-F 9am-5pm
 
     Returns:
         List of TideCard objects for each period
@@ -190,9 +225,24 @@ async def get_tide_cards(start_date: datetime | None = None) -> list[TideCard]:
 
     # Create cards for each period
     cards = []
+    requested_count = 3
     for days in [30, 60, 90]:
-        highest = get_top_tides(daylight_tides, "H", count=3, days=days, start_date=start_date)
-        lowest = get_top_tides(daylight_tides, "L", count=3, days=days, start_date=start_date)
-        cards.append(TideCard(period_days=days, highest_tides=highest, lowest_tides=lowest))
+        highest = get_top_tides(
+            daylight_tides, "H",
+            count=requested_count, days=days, start_date=start_date, work_filter=work_filter,
+        )
+        lowest = get_top_tides(
+            daylight_tides, "L",
+            count=requested_count, days=days, start_date=start_date, work_filter=work_filter,
+        )
+        cards.append(
+            TideCard(
+                period_days=days,
+                highest_tides=highest,
+                lowest_tides=lowest,
+                highest_count_limited=len(highest) < requested_count,
+                lowest_count_limited=len(lowest) < requested_count,
+            )
+        )
 
     return cards

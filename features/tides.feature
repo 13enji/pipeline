@@ -69,6 +69,42 @@ Feature: Tide dashboard for Solana Beach
     When I view this tide entry
     Then I should not see "First light" or "Last light"
 
+  # --- Work Hours Filter ---
+
+  Scenario: Default to showing only tides outside work hours
+    When I visit the tide dashboard
+    Then the work hours filter should be ON by default
+    And I should only see tides outside M-F 9am-5pm
+
+  Scenario: Toggle to show all daylight tides
+    Given I am viewing the tide dashboard with work filter ON
+    When I toggle off the work hours filter
+    Then I should see all daylight tides including those during work hours
+
+  Scenario: Weekend tides always shown when filter is ON
+    Given the work hours filter is ON
+    And there is a daylight tide at 2pm on Saturday
+    When I view the tide dashboard
+    Then the Saturday 2pm tide should be visible
+
+  Scenario: Weekday morning tide before 9am shown when filter is ON
+    Given the work hours filter is ON
+    And there is a daylight tide at 7am on Monday
+    When I view the tide dashboard
+    Then the Monday 7am tide should be visible
+
+  Scenario: Weekday tide during work hours hidden when filter is ON
+    Given the work hours filter is ON
+    And there is a daylight tide at 11am on Tuesday
+    When I view the tide dashboard
+    Then the Tuesday 11am tide should not be visible
+
+  Scenario: Show message when fewer than 3 tides match filter
+    Given the work hours filter is ON
+    And only 2 high tides match the filter in the 30-day period
+    When I view the 30-day tide card
+    Then I should see a message indicating fewer tides are available
+
   # --- Sorting ---
 
   Scenario: Sort tides with equal heights by date
