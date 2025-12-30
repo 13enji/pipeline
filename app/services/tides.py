@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
 
 from app.services.noaa import TidePrediction, fetch_tide_predictions
 from app.services.twilight import (
@@ -11,13 +10,6 @@ from app.services.twilight import (
     get_daylight_window,
     is_during_extended_daylight,
 )
-
-# Simple in-memory cache for tide cards
-_cache: dict[str, Any] = {
-    "cards": None,
-    "fetched_at": None,
-}
-CACHE_TTL_HOURS = 20  # Refresh if cache is older than 20 hours
 
 
 @dataclass
@@ -173,29 +165,16 @@ def get_top_tides(
     return [_process_tide(pred, daylight) for pred, daylight in filtered[:count]]
 
 
-def _is_cache_valid() -> bool:
-    """Check if the cache is valid (exists and not expired)."""
-    if _cache["cards"] is None or _cache["fetched_at"] is None:
-        return False
-    age = datetime.now(LA_JOLLA_TZ) - _cache["fetched_at"]
-    return age < timedelta(hours=CACHE_TTL_HOURS)
-
-
-async def get_tide_cards(start_date: datetime | None = None, force_refresh: bool = False) -> list[TideCard]:
+async def get_tide_cards(start_date: datetime | None = None) -> list[TideCard]:
     """
     Get tide cards for 30, 60, and 90 day periods.
 
     Args:
         start_date: Start date for predictions (defaults to now)
-        force_refresh: If True, bypass cache and fetch fresh data
 
     Returns:
         List of TideCard objects for each period
     """
-    # Return cached data if valid and not forcing refresh
-    if not force_refresh and _is_cache_valid() and _cache["cards"] is not None:
-        return _cache["cards"]
-
     if start_date is None:
         start_date = datetime.now(LA_JOLLA_TZ)
 
@@ -215,9 +194,5 @@ async def get_tide_cards(start_date: datetime | None = None, force_refresh: bool
         highest = get_top_tides(daylight_tides, "H", count=3, days=days, start_date=start_date)
         lowest = get_top_tides(daylight_tides, "L", count=3, days=days, start_date=start_date)
         cards.append(TideCard(period_days=days, highest_tides=highest, lowest_tides=lowest))
-
-    # Update cache
-    _cache["cards"] = cards
-    _cache["fetched_at"] = datetime.now(LA_JOLLA_TZ)
 
     return cards
