@@ -255,6 +255,20 @@ async def tide_dashboard(
                 color: #888;
             }}
             @media (max-width: 768px) {{
+                .controls {{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }}
+                .toggle-btn {{
+                    display: block;
+                    text-align: center;
+                    margin-right: 0;
+                }}
+                .unit-label {{
+                    margin-left: 0;
+                    text-align: center;
+                }}
                 .tide-cards {{
                     flex-direction: column;
                 }}
