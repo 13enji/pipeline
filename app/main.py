@@ -123,6 +123,7 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
     <!DOCTYPE html>
     <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Tide Dashboard - Solana Beach</title>
         <style>
             body {{
