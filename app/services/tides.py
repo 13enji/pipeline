@@ -8,22 +8,22 @@ from app.services.twilight import (
     LA_JOLLA_TZ,
     DaylightWindow,
     get_daylight_window,
-    get_light_indicator,
     is_during_extended_daylight,
 )
 
 
 @dataclass
 class ProcessedTide:
-    """A processed tide with formatting and light indicator."""
+    """A processed tide with formatting and twilight info."""
 
     time: datetime
     height_ft: float
     height_m: float
     tide_type: str
-    light_indicator: str | None  # "First light", "Last light", or None
     formatted_date: str  # "DEC 20th 2025"
     formatted_time: str  # "1:00pm"
+    twilight_label: str  # "First light" or "Last light"
+    twilight_time: str  # formatted time of closest twilight
 
     def height_display(self, metric: bool = False) -> str:
         """Get formatted height with units."""
@@ -56,16 +56,40 @@ def _format_time(dt: datetime) -> str:
     return dt.strftime("%I:%M%p").lstrip("0").lower()
 
 
+def _get_closest_twilight(tide_time: datetime, daylight: DaylightWindow) -> tuple[str, datetime]:
+    """
+    Get the closest twilight (first light or last light) to the tide time.
+
+    Returns:
+        Tuple of (label, twilight_time)
+    """
+    # Make tide_time timezone-aware if needed
+    if tide_time.tzinfo is None:
+        tide_time = tide_time.replace(tzinfo=LA_JOLLA_TZ)
+
+    # Calculate distance to each twilight
+    dist_to_dawn = abs((tide_time - daylight.civil_dawn).total_seconds())
+    dist_to_dusk = abs((tide_time - daylight.civil_dusk).total_seconds())
+
+    if dist_to_dawn <= dist_to_dusk:
+        return ("First light", daylight.civil_dawn)
+    else:
+        return ("Last light", daylight.civil_dusk)
+
+
 def _process_tide(prediction: TidePrediction, daylight: DaylightWindow) -> ProcessedTide:
     """Convert a tide prediction to a processed tide."""
+    twilight_label, twilight_time = _get_closest_twilight(prediction.time, daylight)
+
     return ProcessedTide(
         time=prediction.time,
         height_ft=prediction.height_ft,
         height_m=prediction.height_m,
         tide_type=prediction.tide_type,
-        light_indicator=get_light_indicator(prediction.time, daylight),
         formatted_date=_format_date(prediction.time),
         formatted_time=_format_time(prediction.time),
+        twilight_label=twilight_label,
+        twilight_time=_format_time(twilight_time),
     )
 
 

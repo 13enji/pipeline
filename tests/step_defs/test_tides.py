@@ -355,13 +355,25 @@ def check_date_format(response, format_example):
     assert re.search(pattern, response.text)
 
 
-@then(parsers.parse('I should see the time in format "{format_example}" in local time'))
+@then(parsers.parse('I should see the tide time in format "{format_example}" in local time'))
 def check_time_format(response, format_example):
     # Check for time format like "10:00am"
     import re
 
     pattern = r"\d{1,2}:\d{2}(am|pm)"
     assert re.search(pattern, response.text)
+
+
+@then("I should see the closest twilight time with label")
+def check_twilight_time_with_label(response):
+    # Check that we have either "First light" or "Last light" with a time
+    import re
+
+    assert response.status_code == 200
+    # Should have twilight label (First light or Last light)
+    assert "First light" in response.text or "Last light" in response.text
+    # Should have twilight time in format like "6:30am"
+    assert re.search(r'class="twilight-time">\d{1,2}:\d{2}(am|pm)', response.text)
 
 
 @then("I should see the tide height with units")

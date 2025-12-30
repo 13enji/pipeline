@@ -72,14 +72,14 @@ def greet_submit(name: str = Form("")) -> str:
 
 def _render_tide_entry(tide: ProcessedTide, metric: bool) -> str:
     """Render a single tide entry as HTML."""
-    light_badge = ""
-    if tide.light_indicator:
-        light_badge = f'<span class="light-indicator">{tide.light_indicator}</span>'
-
     return f"""
         <div class="tide-entry">
             <div class="tide-date">{tide.formatted_date}</div>
-            <div class="tide-time">{tide.formatted_time} {light_badge}</div>
+            <div class="tide-time">{tide.formatted_time}</div>
+            <div class="tide-twilight">
+                <span class="twilight-label">{tide.twilight_label}</span>
+                <span class="twilight-time">{tide.twilight_time}</span>
+            </div>
             <div class="tide-height">{tide.height_display(metric)}</div>
         </div>
     """
@@ -203,14 +203,22 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
                 color: #1a5f7a;
                 margin-top: 5px;
             }}
-            .light-indicator {{
+            .tide-twilight {{
+                font-size: 13px;
+                color: #666;
+                margin-top: 3px;
+            }}
+            .twilight-label {{
                 display: inline-block;
-                padding: 2px 8px;
+                padding: 2px 6px;
                 background: #ffd700;
                 color: #333;
                 border-radius: 3px;
                 font-size: 11px;
-                margin-left: 5px;
+                margin-right: 5px;
+            }}
+            .twilight-time {{
+                color: #888;
             }}
         </style>
     </head>
