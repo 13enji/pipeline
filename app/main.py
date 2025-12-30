@@ -220,6 +220,15 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
             .twilight-time {{
                 color: #888;
             }}
+            @media (max-width: 768px) {{
+                .tide-cards {{
+                    flex-direction: column;
+                }}
+                .tide-card {{
+                    min-width: auto;
+                    width: 100%;
+                }}
+            }}
         </style>
     </head>
     <body>
