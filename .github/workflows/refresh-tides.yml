@@ -1,0 +1,23 @@
+name: Refresh Tides
+
+on:
+  schedule:
+    # Run at 2am Pacific Time (10am UTC during PST, 9am UTC during PDT)
+    # Using 10am UTC to cover PST; during PDT it will run at 3am which is fine
+    - cron: '0 10 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Refresh tide cache
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/refresh-tides" \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 60
+        env:
+          APP_URL: ${{ secrets.APP_URL }}

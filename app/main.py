@@ -107,6 +107,13 @@ def _render_tide_card(card: TideCard, metric: bool) -> str:
     """
 
 
+@app.post("/refresh-tides")
+async def refresh_tides() -> dict[str, str]:
+    """Force refresh the tide cache. Called by scheduled job."""
+    await get_tide_cards(force_refresh=True)
+    return {"status": "ok", "message": "Tide cache refreshed"}
+
+
 @app.get("/tides", response_class=HTMLResponse)
 async def tide_dashboard(units: str = Query("imperial")) -> str:
     """Tide dashboard showing highest and lowest daylight tides."""
@@ -124,7 +131,7 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tide Dashboard - Solana Beach</title>
+        <title>Tide Dashboard - San Diego</title>
         <style>
             body {{
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -233,7 +240,7 @@ async def tide_dashboard(units: str = Query("imperial")) -> str:
         </style>
     </head>
     <body>
-        <h1>Tide Dashboard - La Jolla / Solana Beach</h1>
+        <h1>Tide Dashboard - San Diego</h1>
         <p>Top 3 highest and lowest tides during daylight hours</p>
 
         <div class="controls">
