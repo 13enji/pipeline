@@ -20,7 +20,7 @@ class ProcessedTide:
     height_ft: float
     height_m: float
     tide_type: str
-    formatted_date: str  # "DEC 20th 2025"
+    formatted_date: str  # "SAT DEC 20th 2025"
     formatted_time: str  # "1:00pm"
     twilight_label: str  # "First light" or "Last light"
     twilight_time: str  # formatted time of closest twilight
@@ -67,13 +67,14 @@ def is_outside_work_hours(dt: datetime) -> bool:
 
 
 def _format_date(dt: datetime) -> str:
-    """Format date as 'DEC 20th 2025'."""
+    """Format date as 'SAT DEC 20th 2025'."""
     day = dt.day
     if 11 <= day <= 13:
         suffix = "th"
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return dt.strftime(f"%b {day}{suffix} %Y").upper()
+    weekday = dt.strftime("%a").upper()
+    return f"{weekday} " + dt.strftime(f"%b {day}{suffix} %Y").upper()
 
 
 def _format_time(dt: datetime) -> str:

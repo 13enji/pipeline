@@ -374,14 +374,14 @@ def check_imperial_units(response):
     assert "ft" in response.text
 
 
-@then(parsers.parse('I should see the date in format "{format_example}"'))
+@then(parsers.parse('I should see the day of week and date in format "{format_example}"'))
 def check_date_format(response, format_example):
-    # Check for uppercase month format
+    # Check for day of week + uppercase month format
     assert response.status_code == 200
-    # Should have dates like "JAN 15TH 2025"
+    # Should have dates like "WED JAN 15TH 2025"
     import re
 
-    pattern = r"[A-Z]{3} \d{1,2}(ST|ND|RD|TH) \d{4}"
+    pattern = r"[A-Z]{3} [A-Z]{3} \d{1,2}(ST|ND|RD|TH) \d{4}"
     assert re.search(pattern, response.text)
 
 

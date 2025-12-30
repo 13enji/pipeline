@@ -33,7 +33,7 @@ Feature: Tide dashboard for Solana Beach
 
   Scenario: Display tide entry with required information
     When I view a tide entry
-    Then I should see the date in format "DEC 20th 2025"
+    Then I should see the day of week and date in format "SAT DEC 20th 2025"
     And I should see the tide time in format "1:00pm" in local time
     And I should see the closest twilight time with label
     And I should see the tide height with units
