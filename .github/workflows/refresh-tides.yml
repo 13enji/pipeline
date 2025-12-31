@@ -11,12 +11,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Refresh tide cache
         run: |
           curl -X POST "${{ secrets.APP_URL }}/refresh-tides" \
             --fail \
             --silent \
             --show-error \
-            --max-time 120
+            --max-time 300
         env:
           APP_URL: ${{ secrets.APP_URL }}
+
+      - name: Sync station list from Railway
+        run: |
+          # Fetch current station list from Railway
+          STATS=$(curl -s "${{ secrets.APP_URL }}/cache-stats")
+
+          # Transform to known_stations.json format (extract only the fields we need)
+          echo "$STATS" | jq '[.stations[] | {
+            station_id,
+            timezone_name,
+            name,
+            state,
+            latitude,
+            longitude
+          }]' > data/known_stations.json.new
+
+          # Check if file changed
+          if ! diff -q data/known_stations.json data/known_stations.json.new > /dev/null 2>&1; then
+            mv data/known_stations.json.new data/known_stations.json
+            echo "Station list updated"
+            echo "STATIONS_CHANGED=true" >> $GITHUB_ENV
+          else
+            rm data/known_stations.json.new
+            echo "No changes to station list"
+            echo "STATIONS_CHANGED=false" >> $GITHUB_ENV
+          fi
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+
+      - name: Commit and push station list
+        if: env.STATIONS_CHANGED == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/known_stations.json
+          git commit -m "Sync station list from Railway
+
+          Automatically synced by overnight refresh job.
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          git push

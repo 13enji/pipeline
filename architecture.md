@@ -147,16 +147,38 @@ Base URL: `https://api.zippopotam.us/us/{zip_code}`
 ### Cache Flow
 
 1. **On Request**: Check if station is cached and valid (< 20 hours old)
-2. **Cache Miss**: Fetch from NOAA API, add to cache, persist station ID
-3. **Overnight Refresh**: `/refresh-tides` refreshes all known stations
-4. **Startup**: Warms cache with La Jolla data
-5. **On Deploy**: Station list resets to seed (La Jolla), others re-discovered on use
+2. **Cache Miss**: Fetch from NOAA API, add to cache, persist station ID to `known_stations.json`
+3. **Overnight Refresh**: GitHub Actions calls `/refresh-tides` to refresh all known stations
+4. **Overnight Sync**: GitHub Actions fetches station list from `/cache-stats` and commits to repo
+5. **Startup**: Warms cache with La Jolla data
+6. **On Deploy**: Uses committed `known_stations.json` which includes all synced stations
+
+### Station Persistence Decision
+
+**Problem**: Railway deploys create fresh containers, so runtime-discovered stations were lost.
+
+**Chosen Solution**: Overnight GitHub Actions sync
+
+The overnight job fetches the station list from Railway and commits it back to the repo.
+This ensures all discovered stations persist across deploys.
+
+| Alternative | Why Discounted |
+|-------------|----------------|
+| Railway Volumes | Requires paid plan ($5/month), not available on free tier |
+| Real-time GitHub sync | More complex, requires GitHub token in Railway env |
+| Database (Supabase) | More setup, adds dependency for simple key-value storage |
+| Manual periodic commit | Error-prone, requires human intervention |
+
+**Tradeoff**: If a deploy happens between station discovery and overnight sync, that station is temporarily lost (but re-discovered on next search). This is acceptable because:
+- La Jolla (seed station) is always preserved
+- Deploys are infrequent
+- Lost stations are re-added on first user search
 
 ### Endpoints
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/cache-stats` | GET | View cached stations and refresh times |
+| `/cache-stats` | GET | View cached stations with full metadata for sync |
 | `/refresh-tides` | POST | Force refresh all known stations |
 
 ## Testing Strategy

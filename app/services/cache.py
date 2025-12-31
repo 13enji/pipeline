@@ -297,6 +297,9 @@ def get_cache_stats() -> dict[str, object]:
             "station_id": s.station_id,
             "name": s.name or "(unknown)",
             "state": s.state or "",
+            "timezone_name": s.timezone_name,
+            "latitude": s.latitude,
+            "longitude": s.longitude,
         }
         if s.latitude and s.longitude:
             distance = _haversine_distance(
