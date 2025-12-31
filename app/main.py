@@ -333,7 +333,7 @@ def _render_window_entry(window: TideWindow, metric: bool) -> str:
 
 @app.get("/windows", response_class=HTMLResponse)
 async def tide_windows(
-    max_height: float = Query(-1.0),
+    max_height: float = Query(-0.5),
     min_duration: int = Query(60),
     units: str = Query("imperial"),
     work_filter: str = Query("on"),

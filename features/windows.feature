@@ -11,7 +11,7 @@ Feature: Tide window finder for tidepooling
   Scenario: Find tidepooling windows with default settings
     When I visit the tide window finder
     Then I should see a search form with tides below, min duration, and days
-    And the default tides below should be -1.0 ft
+    And the default tides below should be -0.5 ft
     And the default min duration should be 60 minutes
     And the default search range should be 90 days
 
