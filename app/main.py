@@ -597,7 +597,7 @@ def _render_location_window_entry(window: LocationTideWindow, metric: bool) -> s
 
 @app.get("/location", response_class=HTMLResponse)
 async def location_tide_windows(
-    zip_code: str = Query(""),
+    zip_code: str = Query("92037"),
     max_height: float = Query(-0.5),
     min_duration: int = Query(60),
     units: str = Query("imperial"),
