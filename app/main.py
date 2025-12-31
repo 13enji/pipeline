@@ -35,6 +35,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Pipeline", version="0.1.0", lifespan=lifespan)
 
 
+def _calculate_ahead_hours(window_start: datetime) -> int:
+    """Calculate AheadHour parameter for NWS weather link.
+
+    Returns hours from now to (window_start - 6 hours), capped at 100.
+    """
+    # Handle timezone-aware datetimes
+    if window_start.tzinfo is not None:
+        now = datetime.now(window_start.tzinfo)
+    else:
+        now = datetime.now()
+    # Use window start minus 6 hours to position 48-hour window
+    target_time = window_start - timedelta(hours=6)
+    hours_ahead = (target_time - now).total_seconds() / 3600
+    # Cap at 100 hours max, minimum 0
+    return max(0, min(100, int(hours_ahead)))
+
+
+def _generate_weather_url(lat: float, lon: float, ahead_hours: int) -> str:
+    """Generate NWS forecast URL with temp, wind, and precip display."""
+    return (
+        f"https://forecast.weather.gov/MapClick.php"
+        f"?w0=t&w3=sfcwind&w3u=1&w5=pop"
+        f"&AheadHour={ahead_hours}"
+        f"&FcstType=graphical"
+        f"&textField1={lat}&textField2={lon}"
+    )
+
+
 @app.post("/refresh-tides")
 async def refresh_tides() -> dict[str, Any]:
     """Force refresh the tide cache. Called by scheduled job."""
@@ -437,15 +465,25 @@ def _render_window_entry(
     metric: bool,
     weather: WindowWeather | None = None,
     station_id: str = "9410230",
+    lat: float = 32.8328,
+    lon: float = -117.2713,
 ) -> str:
     """Render a single tide window as HTML."""
     weather_html = ""
     if weather:
-        weather_html = f"""
-            <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
-        """
+        ahead_hours = _calculate_ahead_hours(window.start_time)
+        weather_url = _generate_weather_url(lat, lon, ahead_hours)
+        weather_text = f"{weather.temp_display(metric)}  {weather.precip_display()}"
+        weather_html = (
+            f'<div class="window-weather">'
+            f'<a href="{weather_url}" class="weather-link" target="_blank">'
+            f"{weather_text}</a></div>"
+        )
     window_date = window.start_time.strftime("%Y%m%d")
-    noaa_url = f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id={station_id}&bdate={window_date}&edate={window_date}"
+    noaa_url = (
+        f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html"
+        f"?id={station_id}&bdate={window_date}&edate={window_date}"
+    )
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
@@ -496,9 +534,13 @@ async def tide_windows(
 
     # Fetch weather for La Jolla (default zip 92037)
     forecasts = []
+    weather_lat = 32.8328  # Default La Jolla coordinates
+    weather_lon = -117.2713
     try:
         location = await geocode_zip("92037")
-        forecasts = await get_hourly_forecasts(location.latitude, location.longitude)
+        weather_lat = location.latitude
+        weather_lon = location.longitude
+        forecasts = await get_hourly_forecasts(weather_lat, weather_lon)
     except GeocodingError:
         pass  # Weather will just not be shown
 
@@ -515,7 +557,7 @@ async def tide_windows(
     # Render windows with weather
     def render_with_weather(w: TideWindow) -> str:
         weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
-        return _render_window_entry(w, metric, weather)
+        return _render_window_entry(w, metric, weather, lat=weather_lat, lon=weather_lon)
 
     windows_html = "".join(render_with_weather(w) for w in windows)
     if not windows:
@@ -674,6 +716,13 @@ async def tide_windows(
                 width: 100%;
                 margin-top: 5px;
             }}
+            .weather-link {{
+                color: inherit;
+                text-decoration: none;
+            }}
+            .weather-link:hover {{
+                text-decoration: underline;
+            }}
             .window-noaa {{
                 font-size: 13px;
                 width: 100%;
@@ -771,15 +820,25 @@ def _render_location_window_entry(
     metric: bool,
     weather: WindowWeather | None = None,
     station_id: str = "9410230",
+    lat: float = 32.8328,
+    lon: float = -117.2713,
 ) -> str:
     """Render a single location-based tide window as HTML."""
     weather_html = ""
     if weather:
-        weather_html = f"""
-            <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
-        """
+        ahead_hours = _calculate_ahead_hours(window.start_time)
+        weather_url = _generate_weather_url(lat, lon, ahead_hours)
+        weather_text = f"{weather.temp_display(metric)}  {weather.precip_display()}"
+        weather_html = (
+            f'<div class="window-weather">'
+            f'<a href="{weather_url}" class="weather-link" target="_blank">'
+            f"{weather_text}</a></div>"
+        )
     window_date = window.start_time.strftime("%Y%m%d")
-    noaa_url = f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id={station_id}&bdate={window_date}&edate={window_date}"
+    noaa_url = (
+        f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html"
+        f"?id={station_id}&bdate={window_date}&edate={window_date}"
+    )
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
@@ -884,7 +943,10 @@ async def location_tide_windows(
             # Render windows with weather
             def render_with_weather(w: LocationTideWindow) -> str:
                 weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
-                return _render_location_window_entry(w, metric, weather, station.id)
+                return _render_location_window_entry(
+                    w, metric, weather, station.id,
+                    lat=location.latitude, lon=location.longitude
+                )
 
             windows_html = "".join(render_with_weather(w) for w in windows)
             if not windows:
@@ -1058,6 +1120,13 @@ async def location_tide_windows(
                 font-size: 14px;
                 width: 100%;
                 margin-top: 5px;
+            }}
+            .weather-link {{
+                color: inherit;
+                text-decoration: none;
+            }}
+            .weather-link:hover {{
+                text-decoration: underline;
             }}
             .window-noaa {{
                 font-size: 13px;

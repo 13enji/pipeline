@@ -29,6 +29,12 @@
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
+### 8. Tidepooling locations directory
+- Scrape web for known tidepooling locations in USA
+- Create a page listing all locations
+- Individual page for each location with info (description, tips, best times)
+- Map showing all tidepooling locations
+
 ---
 
 ## Completed Features
@@ -77,3 +83,8 @@
   - Uses NWS (Weather.gov) API - free, no rate limits
   - 60-minute cache TTL for weather data
   - Displays inline with each window entry
+- Weather source links
+  - Weather text is clickable, links to NWS forecast page
+  - Shows temp, wind, and precipitation for location
+  - AheadHour param positions 48-hour window near tide window time
+  - Links open in new tab, underline on hover
