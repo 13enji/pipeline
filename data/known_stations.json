@@ -6,5 +6,13 @@
     "state": "CA",
     "latitude": 32.86688888888889,
     "longitude": -117.2571388888889
+  },
+  {
+    "station_id": "8517847",
+    "timezone_name": "America/New_York",
+    "name": "Brooklyn Bridge",
+    "state": "NY",
+    "latitude": 40.7033,
+    "longitude": -73.995
   }
 ]
