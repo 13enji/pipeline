@@ -48,11 +48,12 @@ Feature: Weather Integration
     When the page loads with windows in the next 7 days
     Then weather should be fetched for La Jolla coordinates
 
-  Scenario: Location page uses zip code for weather
+  Scenario: Location page uses station coordinates for weather
     Given I am on the location page
     And I have entered zip code "94123"
     When the page loads with windows in the next 7 days
-    Then weather should be fetched for the zip code coordinates
+    Then weather should be fetched for the station coordinates
+    # User will be AT the station for tidepooling, not at their search location
 
   # --- Error Handling ---
 

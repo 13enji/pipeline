@@ -53,12 +53,13 @@ Feature: Weather source links
 
   # --- Location Page ---
 
-  Scenario: Location page weather links use searched coordinates
+  Scenario: Location page weather links use station coordinates
     Given I am on the location page
     And I have searched for zip code "94123"
     And there is a window with weather displayed
-    Then the weather link should include the coordinates for zip 94123
+    Then the weather link should include the station coordinates
     And the link should use textField1 for latitude and textField2 for longitude
+    # Weather is for where user will BE (station), not where they searched from
 
   # --- No Link When No Weather ---
 

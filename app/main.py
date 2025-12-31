@@ -924,9 +924,9 @@ async def location_tide_windows(
                 days=days,
             )
 
-            # Fetch weather for zip code location
+            # Fetch weather for station location (where user will be tidepooling)
             forecasts = await get_hourly_forecasts(
-                location.latitude, location.longitude
+                station.latitude, station.longitude
             )
 
             # Render station info
@@ -945,7 +945,7 @@ async def location_tide_windows(
                 weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
                 return _render_location_window_entry(
                     w, metric, weather, station.id,
-                    lat=location.latitude, lon=location.longitude
+                    lat=station.latitude, lon=station.longitude
                 )
 
             windows_html = "".join(render_with_weather(w) for w in windows)

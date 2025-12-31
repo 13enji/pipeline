@@ -116,7 +116,7 @@ def test_ahead_hour_zero():
     pass
 
 
-@scenario("../../features/weather_links.feature", "Location page weather links use searched coordinates")
+@scenario("../../features/weather_links.feature", "Location page weather links use station coordinates")
 def test_location_weather_link():
     pass
 
@@ -325,12 +325,13 @@ def check_ahead_hours_zero(ahead_hours_result):
     assert ahead_hours_result == 0
 
 
-@then("the weather link should include the coordinates for zip 94123")
-def check_sf_coords(response):
+@then("the weather link should include the station coordinates")
+def check_station_coords(response):
     assert response.status_code == 200
-    # SF coords: 37.8003, -122.4369
-    assert "37.8" in response.text
-    assert "-122.4" in response.text
+    # SF station coords: 37.8063, -122.4659 (not zip coords 37.8003, -122.4369)
+    # Weather should be for where user will BE (station), not where they searched from
+    assert "37.8063" in response.text or "37.806" in response.text
+    assert "-122.4659" in response.text or "-122.466" in response.text
 
 
 @then("no weather info should be displayed")

@@ -68,7 +68,7 @@ def test_windows_uses_default_location():
     pass
 
 
-@scenario("../../features/weather.feature", "Location page uses zip code for weather")
+@scenario("../../features/weather.feature", "Location page uses station coordinates for weather")
 def test_location_uses_zip_code():
     pass
 
@@ -309,9 +309,10 @@ def check_la_jolla_weather(response):
     assert response.status_code == 200
 
 
-@then("weather should be fetched for the zip code coordinates")
-def check_zip_weather():
-    # Verified by the implementation - location endpoint uses user's zip
+@then("weather should be fetched for the station coordinates")
+def check_station_weather():
+    # Weather is fetched for the station location (where user will be tidepooling),
+    # not the zip code they searched from
     pass
 
 
