@@ -1,9 +1,12 @@
-# Pipeline
+# Tidepooling.org
 
 Tide window finder web application built with FastAPI. Helps find optimal low-tide windows for coastal activities by analyzing NOAA tide prediction data.
 
+**Live at: [tidepooling.org](https://tidepooling.org)**
+
 ## Features
 
+- **Landing Page** (`/`) - Navigation to all app features
 - **Tide Dashboard** (`/tides`) - 30/60/90 day tide forecasts for La Jolla
 - **Window Finder** (`/windows`) - Find continuous windows where tide stays below a threshold
 - **Location Search** (`/location`) - Enter any US zip code to find tide windows for the nearest NOAA station
@@ -11,12 +14,14 @@ Tide window finder web application built with FastAPI. Helps find optimal low-ti
 - **Units** - Toggle between imperial (ft/miles) and metric (m/km)
 - **Light Times** - Shows first/last light times for each window
 - **Weather Forecasts** - Temperature range and precipitation chance for windows within 7 days
+- **NOAA Links** - Direct links to NOAA tide predictions for each window
 - **Saved Preferences** - Remembers your settings (zip code, filters, units) in cookies
 
 ## Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
+| `GET /` | Landing page with navigation |
 | `GET /tides` | Tide dashboard with forecasts |
 | `GET /windows` | Tide window finder for La Jolla |
 | `GET /location` | Location-based tide windows (zip code) |

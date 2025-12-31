@@ -18,6 +18,7 @@ A tide window finder web application that fetches data from NOAA's Tides & Curre
 | Feature Tests (BDD) | pytest-bdd | Gherkin specs as executable tests |
 | CI/CD | GitHub Actions | Run tests on every push |
 | Hosting | Railway | Public deployment |
+| CDN/DDOS | Cloudflare | DNS, SSL, DDOS protection, www redirect |
 | Tide Data | NOAA Tides & Currents API | 6-minute interval tide predictions |
 | Geocoding | Zippopotam.us API | Zip code to coordinates |
 | Twilight | Astral library | Civil dawn/dusk calculations |
@@ -74,7 +75,9 @@ pipeline/
 ├── data/                    # Persisted cache data (committed)
 │   └── known_stations.json  # Seed stations for overnight refresh
 ├── features/                # Gherkin feature specifications
+│   ├── landing.feature      # Landing page
 │   ├── location.feature     # Location-based tide windows
+│   ├── noaa_links.feature   # NOAA source data links
 │   ├── preferences.feature  # User preferences
 │   ├── tides.feature        # Tide dashboard
 │   ├── weather.feature      # Weather integration
@@ -82,7 +85,9 @@ pipeline/
 ├── tests/
 │   ├── conftest.py          # Shared pytest fixtures
 │   └── step_defs/           # pytest-bdd step definitions
+│       ├── test_landing.py
 │       ├── test_location.py
+│       ├── test_noaa_links.py
 │       ├── test_preferences.py
 │       ├── test_tides.py
 │       ├── test_weather.py
@@ -248,6 +253,15 @@ On every push:
 - Auto-deploys `main` branch when CI passes
 - Environment variables configured in Railway dashboard
 - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Custom domain: tidepooling.org (via Cloudflare)
+
+### Cloudflare Configuration
+
+- Domain registered and DNS hosted on Cloudflare
+- Proxy enabled for DDOS protection
+- SSL/TLS mode: Full (strict)
+- Redirect rule: www.tidepooling.org → tidepooling.org (301)
+- Railway free tier allows 1 custom domain; www redirect handled by Cloudflare
 
 ## Key Decisions
 
