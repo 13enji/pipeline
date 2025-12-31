@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import FastAPI, Form, Query
 from fastapi.responses import HTMLResponse
 
-from app.services.cache import get_tide_readings, refresh_cache
+from app.services.cache import get_cache_stats, get_tide_readings, refresh_cache
 from app.services.geocoding import GeocodingError, geocode_zip
 from app.services.location_windows import TideWindow as LocationTideWindow
 from app.services.location_windows import find_tide_windows_for_station
@@ -28,6 +28,12 @@ app = FastAPI(title="Pipeline", version="0.1.0", lifespan=lifespan)
 async def refresh_tides() -> dict[str, Any]:
     """Force refresh the tide cache. Called by scheduled job."""
     return await refresh_cache()
+
+
+@app.get("/cache-stats")
+async def cache_stats() -> dict[str, Any]:
+    """View cache statistics including known stations."""
+    return get_cache_stats()
 
 
 def get_current_time() -> datetime:
