@@ -338,7 +338,7 @@ async def tide_windows(
     min_duration: int = Query(60),
     units: str = Query("imperial"),
     work_filter: str = Query("on"),
-    days: int = Query(30),
+    days: int = Query(90),
 ) -> str:
     """Tide window finder showing periods below a height threshold."""
     metric = units.lower() == "metric"
@@ -365,12 +365,13 @@ async def tide_windows(
     base_params = f"max_height={max_height}&min_duration={min_duration}&days={days}"
     new_work_filter = "off" if work_filter_on else "on"
     work_toggle_url = f"/windows?{base_params}&units={units_param}&work_filter={new_work_filter}"
-    work_toggle_text = "Show All Daylight" if work_filter_on else "Outside Work Hours Only"
-    work_filter_status = "Outside work hours" if work_filter_on else "All daylight"
+    work_toggle_text = "Show all daylight tides" if work_filter_on else "Show outside work hours only"
+    work_filter_status = "Outside work hours" if work_filter_on else "All daylight tides"
 
     new_units = "metric" if not metric else "imperial"
     units_toggle_url = f"/windows?{base_params}&units={new_units}&work_filter={work_param}"
-    units_toggle_text = "Switch to Metric" if not metric else "Switch to Imperial"
+    units_toggle_text = "Switch to metric" if not metric else "Switch to imperial"
+    units_display = "m" if metric else "ft"
 
     return f"""
     <!DOCTYPE html>
@@ -389,23 +390,6 @@ async def tide_windows(
             h1 {{
                 color: #1a5f7a;
             }}
-            .controls {{
-                margin-bottom: 20px;
-            }}
-            .toggle-btn {{
-                padding: 10px 20px;
-                background: #1a5f7a;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                text-decoration: none;
-                margin-right: 5px;
-            }}
-            .unit-label {{
-                margin-left: 10px;
-                color: #666;
-            }}
             .search-form {{
                 background: white;
                 padding: 20px;
@@ -413,11 +397,12 @@ async def tide_windows(
                 box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 margin-bottom: 20px;
             }}
-            .form-row {{
-                display: flex;
-                gap: 20px;
-                flex-wrap: wrap;
+            .form-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 15px;
                 align-items: end;
+                margin-bottom: 15px;
             }}
             .form-group {{
                 display: flex;
@@ -429,10 +414,40 @@ async def tide_windows(
                 color: #666;
             }}
             .form-group input, .form-group select {{
-                padding: 10px;
+                padding: 8px;
                 border: 1px solid #ddd;
                 border-radius: 5px;
                 font-size: 16px;
+                width: 100%;
+                box-sizing: border-box;
+            }}
+            .form-group input[type="number"] {{
+                max-width: 100px;
+            }}
+            .toggle-row {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #eee;
+                margin-bottom: 15px;
+            }}
+            .toggle-item {{
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }}
+            .toggle-label {{
+                font-weight: 500;
+                color: #333;
+            }}
+            .toggle-link {{
+                font-size: 13px;
+                color: #1a5f7a;
+                text-decoration: none;
+            }}
+            .toggle-link:hover {{
+                text-decoration: underline;
             }}
             .search-btn {{
                 padding: 10px 30px;
@@ -488,22 +503,12 @@ async def tide_windows(
                 margin-bottom: 15px;
             }}
             @media (max-width: 768px) {{
-                .controls {{
-                    display: flex;
+                .form-grid {{
+                    grid-template-columns: repeat(3, 1fr);
+                }}
+                .toggle-row {{
                     flex-direction: column;
                     gap: 10px;
-                }}
-                .toggle-btn {{
-                    display: block;
-                    text-align: center;
-                    margin-right: 0;
-                }}
-                .unit-label {{
-                    margin-left: 0;
-                    text-align: center;
-                }}
-                .form-row {{
-                    flex-direction: column;
                 }}
                 .window-entry {{
                     flex-direction: column;
@@ -516,37 +521,40 @@ async def tide_windows(
         <h1>Tide Window Finder - San Diego</h1>
         <p>Find times when the tide is below your target height</p>
 
-        <div class="controls">
-            <a href="{units_toggle_url}" class="toggle-btn">{units_toggle_text}</a>
-            <span class="unit-label">Units: {height_unit}</span>
-            <a href="{work_toggle_url}" class="toggle-btn">{work_toggle_text}</a>
-            <span class="unit-label">Filter: {work_filter_status}</span>
-        </div>
-
         <form class="search-form" method="get" action="/windows">
             <input type="hidden" name="units" value="{units_param}">
             <input type="hidden" name="work_filter" value="{work_param}">
-            <div class="form-row">
+            <div class="form-grid">
                 <div class="form-group">
                     <label for="max_height">Tides below ({height_unit})</label>
                     <input type="number" id="max_height" name="max_height"
                            value="{display_height:.1f}" step="0.1">
                 </div>
                 <div class="form-group">
-                    <label for="min_duration">Min duration (minutes)</label>
+                    <label for="min_duration">Min duration</label>
                     <input type="number" id="min_duration" name="min_duration"
                            value="{min_duration}" step="30" min="30" max="480">
                 </div>
                 <div class="form-group">
-                    <label for="days">Days to search</label>
+                    <label for="days">Days</label>
                     <select id="days" name="days">
-                        <option value="30" {"selected" if days == 30 else ""}>30 days</option>
-                        <option value="60" {"selected" if days == 60 else ""}>60 days</option>
-                        <option value="90" {"selected" if days == 90 else ""}>90 days</option>
+                        <option value="30" {"selected" if days == 30 else ""}>30</option>
+                        <option value="60" {"selected" if days == 60 else ""}>60</option>
+                        <option value="90" {"selected" if days == 90 else ""}>90</option>
                     </select>
                 </div>
-                <button type="submit" class="search-btn">Search</button>
             </div>
+            <div class="toggle-row">
+                <div class="toggle-item">
+                    <span class="toggle-label">Units: {units_display}</span>
+                    <a href="{units_toggle_url}" class="toggle-link">{units_toggle_text}</a>
+                </div>
+                <div class="toggle-item">
+                    <span class="toggle-label">Showing: {work_filter_status}</span>
+                    <a href="{work_toggle_url}" class="toggle-link">{work_toggle_text}</a>
+                </div>
+            </div>
+            <button type="submit" class="search-btn">Search</button>
         </form>
 
         <div class="results">

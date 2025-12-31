@@ -13,7 +13,7 @@ Feature: Tide window finder for tidepooling
     Then I should see a search form with tides below, min duration, and days
     And the default tides below should be -1.0 ft
     And the default min duration should be 60 minutes
-    And the default search range should be 30 days
+    And the default search range should be 90 days
 
   Scenario: Find windows below a negative threshold
     Given the tides below threshold is -1.0 ft

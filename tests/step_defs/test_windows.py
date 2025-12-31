@@ -222,7 +222,7 @@ def check_search_form(response):
     assert response.status_code == 200
     assert "Tides below" in response.text
     assert "Min duration" in response.text
-    assert "Days to search" in response.text
+    assert "Days" in response.text
 
 
 @then(parsers.parse("the default tides below should be {value} ft"))
@@ -314,7 +314,7 @@ def check_daylight_hours(response):
 @then("the work hours filter should be ON")
 def check_work_filter_on(response):
     assert response.status_code == 200
-    assert "Show All Daylight" in response.text  # Button text when filter is ON
+    assert "Show all daylight tides" in response.text  # Button text when filter is ON
 
 
 @then("I should only see windows outside M-F 9am-5pm")
