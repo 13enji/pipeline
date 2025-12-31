@@ -546,7 +546,7 @@ async def tide_windows(
                 <div class="form-group">
                     <label for="min_duration">Min duration</label>
                     <input type="number" id="min_duration" name="min_duration"
-                           value="{min_duration}" step="30" min="30" max="480">
+                           value="{min_duration}" step="1" min="0">
                 </div>
                 <div class="form-group">
                     <label for="days">Days</label>
@@ -868,7 +868,7 @@ async def location_tide_windows(
                 <div class="form-group">
                     <label for="min_duration">Min duration</label>
                     <input type="number" id="min_duration" name="min_duration"
-                           value="{min_duration}" step="30">
+                           value="{min_duration}" step="1" min="0">
                 </div>
                 <div class="form-group">
                     <label for="days">Days</label>

@@ -26,12 +26,6 @@
 ### 6. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
-## Bug Fixes / Improvements
-
-### Remove minimum duration constraint
-- Currently min duration input has `min="30"` - remove this arbitrary limit
-- Users should be able to set any duration, including very short windows
-
 ---
 
 ## Completed Features
@@ -55,3 +49,8 @@
   - Caches tide readings by station ID (20-hour TTL)
   - Persists station list for overnight refresh
   - `/cache-stats` endpoint to view cached stations
+- Overnight station sync to git repo
+  - GitHub Actions syncs discovered stations back to repo
+  - Stations persist across Railway deploys
+- Removed minimum duration constraint
+  - Users can now set any duration (including 0 minutes)
