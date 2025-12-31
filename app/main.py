@@ -334,7 +334,7 @@ def _render_window_entry(window: TideWindow, metric: bool) -> str:
 
 @app.get("/windows", response_class=HTMLResponse)
 async def tide_windows(
-    max_height: float = Query(1.0),
+    max_height: float = Query(-1.0),
     min_duration: int = Query(60),
     units: str = Query("imperial"),
     work_filter: str = Query("on"),
@@ -528,9 +528,9 @@ async def tide_windows(
             <input type="hidden" name="work_filter" value="{work_param}">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="max_height">Max tide height ({height_unit})</label>
+                    <label for="max_height">Tides below ({height_unit})</label>
                     <input type="number" id="max_height" name="max_height"
-                           value="{display_height:.1f}" step="0.1" min="-2" max="8">
+                           value="{display_height:.1f}" step="0.1" min="-3" max="8">
                 </div>
                 <div class="form-group">
                     <label for="min_duration">Min duration (minutes)</label>
