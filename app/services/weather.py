@@ -63,6 +63,9 @@ def _is_cache_valid(cache_entry: dict[str, Any]) -> bool:
 
 async def _get_grid_point(lat: float, lon: float) -> str | None:
     """Get the hourly forecast URL for coordinates."""
+    # Round to 4 decimal places (~10m precision) to avoid NWS 301 redirects
+    lat = round(lat, 4)
+    lon = round(lon, 4)
     url = f"https://api.weather.gov/points/{lat},{lon}"
     headers = {"User-Agent": "TideWindowFinder/1.0 (contact@example.com)"}
 
