@@ -78,7 +78,12 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 
 
 async def _fetch_stations() -> list[Station]:
-    """Fetch all tide prediction stations from NOAA."""
+    """Fetch all tide prediction stations from NOAA.
+
+    Only returns reference stations (type="R") which have full datum data
+    and can return tide predictions. Subordinate stations (type="S") only
+    have tide prediction offsets and cannot return direct predictions.
+    """
     global _stations_cache
 
     if _stations_cache is not None:
@@ -95,6 +100,11 @@ async def _fetch_stations() -> list[Station]:
     for s in data.get("stations", []):
         # Skip stations without coordinates
         if s.get("lat") is None or s.get("lng") is None:
+            continue
+
+        # Only include reference stations (type="R") which have full datum data
+        # Subordinate stations (type="S") don't return predictions with MLLW datum
+        if s.get("type") != "R":
             continue
 
         stations.append(
