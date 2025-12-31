@@ -81,6 +81,7 @@ pipeline/
 │   ├── preferences.feature  # User preferences
 │   ├── tides.feature        # Tide dashboard
 │   ├── weather.feature      # Weather integration
+│   ├── weather_links.feature # Weather source links
 │   └── windows.feature      # Window finder
 ├── tests/
 │   ├── conftest.py          # Shared pytest fixtures
@@ -91,6 +92,7 @@ pipeline/
 │       ├── test_preferences.py
 │       ├── test_tides.py
 │       ├── test_weather.py
+│       ├── test_weather_links.py
 │       └── test_windows.py
 ├── .github/
 │   └── workflows/
@@ -144,6 +146,15 @@ Two-step API call:
 - Provides 7 days of hourly forecasts
 - Returns temperature and precipitation probability per hour
 - 60-minute cache TTL (weather changes frequently)
+
+**Weather Source Links**: Weather text is clickable, linking to the NWS graphical forecast page:
+```
+https://forecast.weather.gov/MapClick.php?w0=t&w3=sfcwind&w5=pop&AheadHour={hours}&FcstType=graphical&textField1={lat}&textField2={lon}
+```
+- `w0=t` - Show temperature
+- `w3=sfcwind` - Show surface wind
+- `w5=pop` - Show probability of precipitation
+- `AheadHour` - Positions the 48-hour window near the tide window (capped at 100 hours)
 
 ## Caching Architecture
 

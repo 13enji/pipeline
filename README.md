@@ -14,6 +14,7 @@ Tide window finder web application built with FastAPI. Helps find optimal low-ti
 - **Units** - Toggle between imperial (ft/miles) and metric (m/km)
 - **Light Times** - Shows first/last light times for each window
 - **Weather Forecasts** - Temperature range and precipitation chance for windows within 7 days
+- **Weather Links** - Click weather info to view NWS forecast page for that location/time
 - **NOAA Links** - Direct links to NOAA tide predictions for each window
 - **Saved Preferences** - Remembers your settings (zip code, filters, units) in cookies
 
