@@ -17,6 +17,9 @@
 ### 4. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
+### 5. Add reference stations
+- Allow users to select from known reference stations directly
+
 ---
 
 ## Completed Features
