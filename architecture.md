@@ -71,10 +71,13 @@ pipeline/
 │       ├── weather.py       # NWS weather forecasts
 │       ├── tides.py         # Tide processing for dashboard
 │       ├── twilight.py      # Dawn/dusk calculations
-│       └── windows.py       # Window finding for La Jolla
+│       ├── windows.py       # Window finding for La Jolla
+│       └── locations.py     # Tidepooling locations data service
 ├── data/                    # Persisted cache data (committed)
-│   └── known_stations.json  # Seed stations for overnight refresh
+│   ├── known_stations.json  # Seed stations for overnight refresh
+│   └── tidepooling_locations_raw.json  # Tidepooling location directory data
 ├── features/                # Gherkin feature specifications
+│   ├── directory.feature    # Tidepooling locations directory
 │   ├── landing.feature      # Landing page
 │   ├── location.feature     # Location-based tide windows
 │   ├── noaa_links.feature   # NOAA source data links
@@ -85,7 +88,10 @@ pipeline/
 │   └── windows.feature      # Window finder
 ├── tests/
 │   ├── conftest.py          # Shared pytest fixtures
+│   ├── unit/                # Unit tests
+│   │   └── test_weather.py
 │   └── step_defs/           # pytest-bdd step definitions
+│       ├── test_directory.py
 │       ├── test_landing.py
 │       ├── test_location.py
 │       ├── test_noaa_links.py
@@ -288,3 +294,57 @@ On every push:
 | Reference Stations Only | Filter type="R" | Subordinate stations don't return MLLW predictions |
 | User Preferences | Cookies | Server-side rendering, no flash of defaults, 1-year expiry |
 | Weather Data | NWS API | Free, no rate limits, hourly forecasts, 60-min cache |
+| Maps | Leaflet + OpenStreetMap | Free, no API key, swappable for Mapbox/Google later |
+| Design Approach | Mobile-first | Responsive CSS with mobile as default, desktop enhancements |
+| Location Data | Static JSON | Simple for now, database later for user contributions |
+
+## Tidepooling Locations Directory
+
+### Overview
+
+The directory provides a browsable list of tidepooling locations in Southern California with an interactive map.
+
+### Routes
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/directory` | GET | Map + list of all locations |
+| `/location/{id}` | GET | Individual location detail page |
+
+### Data Source
+
+Location data is stored in `data/tidepooling_locations_raw.json`, aggregated from multiple sources:
+- lajollamom.com
+- sandiego.org
+- californiabeaches.com
+- tidepooling.info
+- outdoorsocal.com
+- california.com
+- localanchor.com
+- funorangecountyparks.com
+
+### Map Integration
+
+- **Library**: Leaflet 1.9.4
+- **Tiles**: OpenStreetMap (no API key required)
+- **Markers**: Click to show popup → click popup to navigate to detail page
+- **Bounds**: Auto-fit to show all markers with padding
+
+### Location Data Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | URL-safe identifier |
+| name | string | Display name |
+| also_known_as | string[] | Alternative names |
+| city, county, region | string | Location hierarchy |
+| coordinates | {lat, lon} | GPS coordinates (nullable) |
+| description | string | Overview text |
+| best_tide_height_ft | float | Recommended max tide height |
+| best_season | string | Best months to visit |
+| tips | string[] | Visitor tips |
+| marine_life | string[] | Species commonly seen |
+| amenities | string[] | Available facilities |
+| access_difficulty | string | easy/moderate/difficult |
+| sources | string[] | Data sources |
+| status | string | Closure notices (optional) |

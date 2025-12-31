@@ -29,16 +29,27 @@
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
-### 8. Tidepooling locations directory
-- Scrape web for known tidepooling locations in USA
-- Create a page listing all locations
-- Individual page for each location with info (description, tips, best times)
-- Map showing all tidepooling locations
+### 8. Tidepooling locations directory (enhancements)
+- ~~Aggregate known tidepooling locations from web sources~~ (done)
+- ~~Create `/directory` page with Leaflet/OSM map~~ (done)
+- ~~Create `/location/{id}` detail pages~~ (done)
+- Pending: Review and resolve 5 potential duplicate pairs manually
+- Pending: Add coordinates to 14 locations missing them
+- Future: Search bar to focus map
+- Future: Driving directions deep link (native maps app)
+- Future: Expand beyond SoCal (Central CA, Northern CA, other states)
+- Future: User-contributed locations (requires database)
 
 ---
 
 ## Completed Features
 
+- Tidepooling locations directory
+  - `/directory` page with Leaflet/OpenStreetMap interactive map
+  - `/location/{id}` detail pages for each location
+  - 62 Southern California locations (48 with coordinates)
+  - Mobile-first responsive design
+  - Data aggregated from 8+ sources
 - NOAA source data links
   - /tides: Link to NOAA with 31-day range from today
   - /windows and /location: Link per window to NOAA for that day

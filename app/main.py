@@ -9,6 +9,12 @@ from app.services.cache import get_cache_stats, get_tide_readings, refresh_cache
 from app.services.geocoding import GeocodingError, geocode_zip
 from app.services.location_windows import TideWindow as LocationTideWindow
 from app.services.location_windows import find_tide_windows_for_station
+from app.services.locations import (
+    Location,
+    get_all_locations,
+    get_location_by_id,
+    get_locations_with_coordinates,
+)
 from app.services.preferences import (
     UserPreferences,
     clear_preferences,
@@ -170,6 +176,7 @@ def landing_page() -> str:
         <p class="tagline">Find the best low tide windows for tidepooling</p>
 
         <div class="nav-buttons">
+            <a href="/directory" class="nav-btn">Tidepooling Directory</a>
             <a href="/location" class="nav-btn">Location Window</a>
             <a href="/windows" class="nav-btn">La Jolla Window</a>
             <a href="/tides" class="nav-btn">Tides</a>
@@ -1232,3 +1239,502 @@ async def location_tide_windows(
     else:
         save_preferences(response, new_prefs)
     return response
+
+
+def _render_location_list_item(loc: Location) -> str:
+    """Render a location as a list item."""
+    no_coords_class = "" if loc.has_coordinates else " no-coords"
+    no_coords_badge = "" if loc.has_coordinates else '<span class="unmapped-badge">Not on map</span>'
+
+    return f"""
+        <a href="/location/{loc.id}" class="location-item{no_coords_class}">
+            <div class="location-name">{loc.name}</div>
+            <div class="location-city">{loc.city}, {loc.county} County</div>
+            {no_coords_badge}
+        </a>
+    """
+
+
+@app.get("/directory", response_class=HTMLResponse)
+async def directory_page() -> str:
+    """Directory page with map and list of tidepooling locations."""
+    all_locations = get_all_locations()
+    locations_with_coords = get_locations_with_coordinates()
+
+    # Generate marker data for JavaScript
+    markers_js = []
+    for loc in locations_with_coords:
+        # Escape quotes in name for JS
+        safe_name = loc.name.replace('"', '\\"').replace("'", "\\'")
+        markers_js.append(
+            f'{{lat: {loc.coordinates.lat}, lon: {loc.coordinates.lon}, '
+            f'name: "{safe_name}", id: "{loc.id}"}}'
+        )
+    markers_data = "[" + ",".join(markers_js) + "]"
+
+    # Generate location list HTML
+    locations_html = "".join(_render_location_list_item(loc) for loc in all_locations)
+
+    # Stats for display
+    total_count = len(all_locations)
+    mapped_count = len(locations_with_coords)
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tidepooling Directory - Southern California</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+            * {{
+                box-sizing: border-box;
+            }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f5f5f5;
+            }}
+            .header {{
+                background: #1a5f7a;
+                color: white;
+                padding: 15px 20px;
+            }}
+            .header h1 {{
+                margin: 0;
+                font-size: 1.5em;
+            }}
+            .header p {{
+                margin: 5px 0 0 0;
+                opacity: 0.9;
+                font-size: 0.9em;
+            }}
+            #map {{
+                width: 100%;
+                height: 50vh;
+                min-height: 300px;
+            }}
+            .content {{
+                padding: 20px;
+                max-width: 1200px;
+                margin: 0 auto;
+            }}
+            .stats {{
+                color: #666;
+                margin-bottom: 15px;
+                font-size: 0.9em;
+            }}
+            .location-list {{
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 15px;
+            }}
+            .location-item {{
+                display: block;
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-decoration: none;
+                color: inherit;
+                transition: box-shadow 0.2s, transform 0.2s;
+            }}
+            .location-item:hover {{
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                transform: translateY(-2px);
+            }}
+            .location-item.no-coords {{
+                border-left: 3px solid #ffa500;
+            }}
+            .location-name {{
+                font-weight: 600;
+                color: #1a5f7a;
+                margin-bottom: 5px;
+            }}
+            .location-city {{
+                color: #666;
+                font-size: 0.9em;
+            }}
+            .unmapped-badge {{
+                display: inline-block;
+                background: #ffa500;
+                color: white;
+                font-size: 0.75em;
+                padding: 2px 6px;
+                border-radius: 3px;
+                margin-top: 8px;
+            }}
+            .back-link {{
+                display: inline-block;
+                margin-top: 20px;
+                color: #1a5f7a;
+            }}
+            .leaflet-popup-content {{
+                margin: 10px 15px;
+            }}
+            .popup-name {{
+                font-weight: 600;
+                color: #1a5f7a;
+                margin-bottom: 8px;
+            }}
+            .popup-link {{
+                display: inline-block;
+                background: #1a5f7a;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 4px;
+                text-decoration: none;
+                font-size: 0.9em;
+            }}
+            .popup-link:hover {{
+                background: #145a6e;
+            }}
+            @media (max-width: 768px) {{
+                .header h1 {{
+                    font-size: 1.3em;
+                }}
+                #map {{
+                    height: 40vh;
+                }}
+                .location-list {{
+                    grid-template-columns: 1fr;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Tidepooling Directory</h1>
+            <p>Southern California tidepooling locations</p>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="content">
+            <div class="stats">
+                {total_count} locations ({mapped_count} on map)
+            </div>
+            <div class="location-list">
+                {locations_html}
+            </div>
+            <a href="/" class="back-link">&larr; Back to Home</a>
+        </div>
+
+        <script>
+            // Initialize map centered on Southern California
+            var map = L.map('map').setView([33.2, -117.4], 9);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OpenStreetMap'
+            }}).addTo(map);
+
+            // Location markers data
+            var locations = {markers_data};
+
+            // Add markers
+            locations.forEach(function(loc) {{
+                var marker = L.marker([loc.lat, loc.lon]).addTo(map);
+                marker.bindPopup(
+                    '<div class="popup-name">' + loc.name + '</div>' +
+                    '<a href="/location/' + loc.id + '" class="popup-link">View Details</a>'
+                );
+            }});
+
+            // Fit map to show all markers if there are any
+            if (locations.length > 0) {{
+                var group = L.featureGroup(locations.map(function(loc) {{
+                    return L.marker([loc.lat, loc.lon]);
+                }}));
+                map.fitBounds(group.getBounds().pad(0.1));
+            }}
+        </script>
+    </body>
+    </html>
+    """
+
+
+def _format_list_html(items: list[str], title: str) -> str:
+    """Format a list of items as HTML with a title."""
+    if not items:
+        return ""
+    items_html = "".join(f"<li>{item}</li>" for item in items)
+    return f"""
+        <div class="info-section">
+            <h3>{title}</h3>
+            <ul>{items_html}</ul>
+        </div>
+    """
+
+
+@app.get("/location/{location_id}", response_class=HTMLResponse)
+async def location_detail_page(location_id: str) -> Response:
+    """Detail page for a single tidepooling location."""
+    location = get_location_by_id(location_id)
+
+    if location is None:
+        return HTMLResponse(
+            content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Location Not Found</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        max-width: 600px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        text-align: center;
+                    }}
+                    h1 {{ color: #c00; }}
+                    a {{ color: #1a5f7a; }}
+                </style>
+            </head>
+            <body>
+                <h1>404 - Location Not Found</h1>
+                <p>The location "{location_id}" does not exist.</p>
+                <a href="/directory">&larr; Back to Directory</a>
+            </body>
+            </html>
+            """,
+            status_code=404,
+        )
+
+    # Build map HTML if coordinates exist
+    map_html = ""
+    map_script = ""
+    if location.has_coordinates:
+        lat = location.coordinates.lat
+        lon = location.coordinates.lon
+        map_html = '<div id="location-map"></div>'
+        map_script = f"""
+        <script>
+            var map = L.map('location-map').setView([{lat}, {lon}], 14);
+            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OpenStreetMap'
+            }}).addTo(map);
+            L.marker([{lat}, {lon}]).addTo(map);
+        </script>
+        """
+    else:
+        map_html = '<div class="no-map">Coordinates not available for this location</div>'
+
+    # Build info sections
+    aka_html = ""
+    if location.also_known_as:
+        aka_text = ", ".join(location.also_known_as)
+        aka_html = f'<p class="aka">Also known as: {aka_text}</p>'
+
+    tide_height_html = ""
+    if location.best_tide_height_ft is not None:
+        tide_height_html = f"""
+            <div class="info-item">
+                <span class="info-label">Best Tide Height</span>
+                <span class="info-value">{location.best_tide_height_ft} ft or lower</span>
+            </div>
+        """
+
+    season_html = ""
+    if location.best_season:
+        season_html = f"""
+            <div class="info-item">
+                <span class="info-label">Best Season</span>
+                <span class="info-value">{location.best_season}</span>
+            </div>
+        """
+
+    difficulty_html = ""
+    if location.access_difficulty:
+        diff = location.access_difficulty
+        difficulty_html = f"""
+            <div class="info-item">
+                <span class="info-label">Access Difficulty</span>
+                <span class="info-value difficulty-{diff}">{diff.title()}</span>
+            </div>
+        """
+
+    tips_html = _format_list_html(location.tips, "Tips")
+    marine_life_html = _format_list_html(location.marine_life, "Marine Life")
+    amenities_html = _format_list_html(location.amenities, "Amenities")
+
+    sources_text = ", ".join(location.sources)
+
+    # Status warning for closed locations
+    status_html = ""
+    if location.status:
+        status_html = f'<div class="status-warning">{location.status}</div>'
+
+    return HTMLResponse(
+        content=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{location.name} - Tidepooling</title>
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <style>
+                * {{
+                    box-sizing: border-box;
+                }}
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background: #f5f5f5;
+                }}
+                .header {{
+                    background: #1a5f7a;
+                    color: white;
+                    padding: 15px 20px;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 1.5em;
+                }}
+                .header .location-meta {{
+                    margin: 5px 0 0 0;
+                    opacity: 0.9;
+                    font-size: 0.9em;
+                }}
+                .aka {{
+                    font-style: italic;
+                    color: rgba(255,255,255,0.8);
+                    font-size: 0.85em;
+                    margin: 5px 0 0 0;
+                }}
+                #location-map {{
+                    width: 100%;
+                    height: 250px;
+                }}
+                .no-map {{
+                    background: #eee;
+                    padding: 40px 20px;
+                    text-align: center;
+                    color: #666;
+                }}
+                .content {{
+                    padding: 20px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }}
+                .status-warning {{
+                    background: #c00;
+                    color: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    font-weight: 600;
+                }}
+                .description {{
+                    font-size: 1.1em;
+                    line-height: 1.6;
+                    color: #333;
+                    margin-bottom: 25px;
+                }}
+                .info-grid {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 25px;
+                }}
+                .info-item {{
+                    background: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }}
+                .info-label {{
+                    display: block;
+                    font-size: 0.85em;
+                    color: #666;
+                    margin-bottom: 5px;
+                }}
+                .info-value {{
+                    font-weight: 600;
+                    color: #1a5f7a;
+                }}
+                .difficulty-easy {{ color: #2e7d32; }}
+                .difficulty-moderate {{ color: #f57c00; }}
+                .difficulty-difficult {{ color: #c62828; }}
+                .info-section {{
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin-bottom: 20px;
+                }}
+                .info-section h3 {{
+                    margin: 0 0 15px 0;
+                    color: #1a5f7a;
+                    font-size: 1.1em;
+                }}
+                .info-section ul {{
+                    margin: 0;
+                    padding-left: 20px;
+                }}
+                .info-section li {{
+                    margin-bottom: 8px;
+                    color: #444;
+                }}
+                .sources {{
+                    color: #888;
+                    font-size: 0.85em;
+                    margin-top: 25px;
+                }}
+                .back-link {{
+                    display: inline-block;
+                    margin-top: 20px;
+                    color: #1a5f7a;
+                }}
+                @media (max-width: 768px) {{
+                    .header h1 {{
+                        font-size: 1.3em;
+                    }}
+                    #location-map {{
+                        height: 200px;
+                    }}
+                    .info-grid {{
+                        grid-template-columns: 1fr;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>{location.name}</h1>
+                <div class="location-meta">{location.city}, {location.county} County</div>
+                {aka_html}
+            </div>
+
+            {map_html}
+
+            <div class="content">
+                {status_html}
+
+                <p class="description">{location.description}</p>
+
+                <div class="info-grid">
+                    {tide_height_html}
+                    {season_html}
+                    {difficulty_html}
+                </div>
+
+                {tips_html}
+                {marine_life_html}
+                {amenities_html}
+
+                <p class="sources">Sources: {sources_text}</p>
+
+                <a href="/directory" class="back-link">&larr; Back to Directory</a>
+            </div>
+
+            {map_script}
+        </body>
+        </html>
+        """
+    )
