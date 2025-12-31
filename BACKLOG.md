@@ -17,19 +17,15 @@
 ### 4. Add reference stations
 - Allow users to select from known reference stations directly
 
-### 5. Link to NOAA source data
-- Add links back to NOAA data pages for each tide window
-- Link to NOAA tides page for the station being displayed
-
-### 6. Map confirmation for location
+### 5. Map confirmation for location
 - Show a map to confirm the location searched for
 - Helps users verify the correct station was found
 
-### 7. 24-hour time filter option
+### 6. 24-hour time filter option
 - Add option to show all 24 hours (no work hours filter)
 - Currently only filters for outside work hours
 
-### 8. Fix Celsius range formatting
+### 7. Fix Celsius range formatting
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
@@ -37,6 +33,10 @@
 
 ## Completed Features
 
+- NOAA source data links
+  - /tides: Link to NOAA with 31-day range from today
+  - /windows and /location: Link per window to NOAA for that day
+  - Links open in new tab
 - Landing page at root URL
   - Navigation buttons: Location Window, La Jolla Window, Tides, Cache Stats
   - Mobile responsive design

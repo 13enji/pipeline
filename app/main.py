@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, Form, Query, Request, Response
@@ -269,6 +269,11 @@ async def tide_dashboard(
     work_toggle_text = "Show All Daylight" if work_filter_on else "Outside Work Hours Only"
     work_filter_status = "Outside work hours" if work_filter_on else "All daylight"
 
+    # NOAA link with 31-day range
+    today = datetime.now()
+    end_date = today + timedelta(days=31)
+    noaa_url = f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=9410230&bdate={today.strftime('%Y%m%d')}&edate={end_date.strftime('%Y%m%d')}"
+
     return f"""
     <!DOCTYPE html>
     <html>
@@ -418,14 +423,20 @@ async def tide_dashboard(
             {cards_html}
         </div>
 
-        <p style="margin-top: 30px;"><a href="/windows">Switch to Tide Window Finder</a></p>
+        <p style="margin-top: 30px;">
+            <a href="/windows">Switch to Tide Window Finder</a> |
+            <a href="{noaa_url}" target="_blank">View on NOAA</a>
+        </p>
     </body>
     </html>
     """
 
 
 def _render_window_entry(
-    window: TideWindow, metric: bool, weather: WindowWeather | None = None
+    window: TideWindow,
+    metric: bool,
+    weather: WindowWeather | None = None,
+    station_id: str = "9410230",
 ) -> str:
     """Render a single tide window as HTML."""
     weather_html = ""
@@ -433,6 +444,8 @@ def _render_window_entry(
         weather_html = f"""
             <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
         """
+    window_date = window.start_time.strftime("%Y%m%d")
+    noaa_url = f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id={station_id}&bdate={window_date}&edate={window_date}"
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
@@ -440,6 +453,7 @@ def _render_window_entry(
             <div class="window-duration">{window.duration_display}</div>
             <div class="window-height">Low: {window.min_height_display(metric)}</div>
             <div class="window-light">{window.relevant_light_display}</div>{weather_html}
+            <div class="window-noaa"><a href="{noaa_url}" target="_blank">View on NOAA</a></div>
         </div>
     """
 
@@ -660,6 +674,14 @@ async def tide_windows(
                 width: 100%;
                 margin-top: 5px;
             }}
+            .window-noaa {{
+                font-size: 13px;
+                width: 100%;
+                margin-top: 5px;
+            }}
+            .window-noaa a {{
+                color: #1a5f7a;
+            }}
             .no-results {{
                 color: #888;
                 font-style: italic;
@@ -745,7 +767,10 @@ async def tide_windows(
 
 
 def _render_location_window_entry(
-    window: LocationTideWindow, metric: bool, weather: WindowWeather | None = None
+    window: LocationTideWindow,
+    metric: bool,
+    weather: WindowWeather | None = None,
+    station_id: str = "9410230",
 ) -> str:
     """Render a single location-based tide window as HTML."""
     weather_html = ""
@@ -753,6 +778,8 @@ def _render_location_window_entry(
         weather_html = f"""
             <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
         """
+    window_date = window.start_time.strftime("%Y%m%d")
+    noaa_url = f"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id={station_id}&bdate={window_date}&edate={window_date}"
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
@@ -760,6 +787,7 @@ def _render_location_window_entry(
             <div class="window-duration">{window.duration_display}</div>
             <div class="window-height">Low: {window.min_height_display(metric)}</div>
             <div class="window-light">{window.relevant_light_display}</div>{weather_html}
+            <div class="window-noaa"><a href="{noaa_url}" target="_blank">View on NOAA</a></div>
         </div>
     """
 
@@ -856,7 +884,7 @@ async def location_tide_windows(
             # Render windows with weather
             def render_with_weather(w: LocationTideWindow) -> str:
                 weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
-                return _render_location_window_entry(w, metric, weather)
+                return _render_location_window_entry(w, metric, weather, station.id)
 
             windows_html = "".join(render_with_weather(w) for w in windows)
             if not windows:
@@ -1030,6 +1058,14 @@ async def location_tide_windows(
                 font-size: 14px;
                 width: 100%;
                 margin-top: 5px;
+            }}
+            .window-noaa {{
+                font-size: 13px;
+                width: 100%;
+                margin-top: 5px;
+            }}
+            .window-noaa a {{
+                color: #1a5f7a;
             }}
             .no-results {{
                 color: #888;
