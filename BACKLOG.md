@@ -20,15 +20,17 @@
 ### 5. Configurable work hours
 - Default to 9-5 M-F
 - Allow user to override start/end times
+- Time-of-day filters: morning only, afternoon only, weekends only
+- Multiple selections allowed (e.g., "mornings and weekends")
 
 ### 6. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
 ## Bug Fixes / Improvements
 
-### Remove 30-minute minimum duration constraint
+### Remove minimum duration constraint
 - Currently min duration input has `min="30"` - remove this arbitrary limit
-- Users should be able to search for shorter windows if desired
+- Users should be able to set any duration, including very short windows
 
 ---
 
