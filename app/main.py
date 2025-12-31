@@ -67,6 +67,91 @@ def get_greeting(name: str) -> str:
         return f"Go to bed {name}"
 
 
+@app.get("/", response_class=HTMLResponse)
+def landing_page() -> str:
+    """Landing page with navigation to main features."""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tidepooling.org</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+                text-align: center;
+            }
+            h1 {
+                color: #1a5f7a;
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+            .tagline {
+                color: #666;
+                font-size: 1.2em;
+                margin-bottom: 40px;
+            }
+            .nav-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+            .nav-btn {
+                display: block;
+                padding: 20px 30px;
+                background: #1a5f7a;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                text-decoration: none;
+                font-size: 1.2em;
+                transition: background 0.2s;
+            }
+            .nav-btn:hover {
+                background: #145a6e;
+            }
+            .nav-btn.secondary {
+                background: #666;
+            }
+            .nav-btn.secondary:hover {
+                background: #555;
+            }
+            @media (max-width: 768px) {
+                h1 {
+                    font-size: 2em;
+                }
+                .nav-buttons {
+                    flex-direction: column;
+                }
+                .nav-btn {
+                    padding: 15px 20px;
+                    font-size: 1em;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Tidepooling.org</h1>
+        <p class="tagline">Find the best low tide windows for tidepooling</p>
+
+        <div class="nav-buttons">
+            <a href="/location" class="nav-btn">Location Window</a>
+            <a href="/windows" class="nav-btn">La Jolla Window</a>
+            <a href="/tides" class="nav-btn">Tides</a>
+            <a href="/cache-stats" class="nav-btn secondary">Cache Stats</a>
+        </div>
+    </body>
+    </html>
+    """
+
+
 @app.get("/hello")
 def hello() -> dict[str, str]:
     return {"message": "Hello, World"}
