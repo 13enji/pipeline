@@ -69,8 +69,8 @@ pipeline/
 │       ├── tides.py         # Tide processing for dashboard
 │       ├── twilight.py      # Dawn/dusk calculations
 │       └── windows.py       # Window finding for La Jolla
-├── data/                    # Persisted cache data (gitignored)
-│   └── known_stations.json  # Stations to refresh overnight
+├── data/                    # Persisted cache data (committed)
+│   └── known_stations.json  # Seed stations for overnight refresh
 ├── features/                # Gherkin feature specifications
 │   ├── location.feature     # Location-based tide windows
 │   ├── tides.feature        # Tide dashboard
@@ -137,8 +137,9 @@ Base URL: `https://api.zippopotam.us/us/{zip_code}`
 ┌─────────────────────────────────────────────────────┐
 │  Persistent Station List                            │
 │  ─────────────────────────────────                  │
-│  File: data/known_stations.json                     │
-│  Content: [{station_id, timezone_name}, ...]        │
+│  File: data/known_stations.json (committed to repo) │
+│  Content: [{station_id, name, state, lat, lon}, ...]│
+│  Seed: La Jolla station always included             │
 │  Purpose: Track stations for overnight refresh      │
 └─────────────────────────────────────────────────────┘
 ```
@@ -149,6 +150,7 @@ Base URL: `https://api.zippopotam.us/us/{zip_code}`
 2. **Cache Miss**: Fetch from NOAA API, add to cache, persist station ID
 3. **Overnight Refresh**: `/refresh-tides` refreshes all known stations
 4. **Startup**: Warms cache with La Jolla data
+5. **On Deploy**: Station list resets to seed (La Jolla), others re-discovered on use
 
 ### Endpoints
 
