@@ -530,7 +530,7 @@ async def tide_windows(
                 <div class="form-group">
                     <label for="max_height">Tides below ({height_unit})</label>
                     <input type="number" id="max_height" name="max_height"
-                           value="{display_height:.1f}" step="0.1" min="-3" max="8">
+                           value="{display_height:.1f}" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="min_duration">Min duration (minutes)</label>
