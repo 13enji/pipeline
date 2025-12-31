@@ -6,6 +6,10 @@ from fastapi import FastAPI, Form, Query
 from fastapi.responses import HTMLResponse
 
 from app.services.cache import get_tide_readings, refresh_cache
+from app.services.geocoding import GeocodingError, geocode_zip
+from app.services.location_windows import TideWindow as LocationTideWindow
+from app.services.location_windows import find_tide_windows_for_station
+from app.services.stations import StationWithDistance, find_nearest_station
 from app.services.tides import ProcessedTide, TideCard, get_tide_cards
 from app.services.windows import TideWindow, find_tide_windows
 
@@ -567,6 +571,330 @@ async def tide_windows(
         </div>
 
         <p style="margin-top: 30px;"><a href="/tides">Switch to Top Tides Dashboard</a></p>
+    </body>
+    </html>
+    """
+
+
+def _render_location_window_entry(window: LocationTideWindow, metric: bool) -> str:
+    """Render a single location-based tide window as HTML."""
+    return f"""
+        <div class="window-entry">
+            <div class="window-date">{window.formatted_date}</div>
+            <div class="window-time">{window.formatted_time_range}</div>
+            <div class="window-duration">{window.duration_display}</div>
+            <div class="window-height">Low: {window.min_height_display(metric)}</div>
+            <div class="window-light">{window.relevant_light_display}</div>
+        </div>
+    """
+
+
+@app.get("/location", response_class=HTMLResponse)
+async def location_tide_windows(
+    zip_code: str = Query(""),
+    max_height: float = Query(-0.5),
+    min_duration: int = Query(60),
+    units: str = Query("imperial"),
+    work_filter: str = Query("on"),
+    days: int = Query(90),
+) -> str:
+    """Location-based tide window finder."""
+    metric = units.lower() == "metric"
+    work_filter_on = work_filter.lower() == "on"
+
+    # Build common params for URLs
+    units_param = "metric" if metric else "imperial"
+    work_param = "on" if work_filter_on else "off"
+    height_unit = "m" if metric else "ft"
+    display_height = max_height * 0.3048 if metric else max_height
+
+    # Default content when no zip code entered
+    station_info_html = ""
+    windows_html = '<p class="no-results">Enter a zip code to find tide windows near you.</p>'
+    error_html = ""
+    station_result: StationWithDistance | None = None
+
+    if zip_code:
+        try:
+            # Geocode the zip code
+            location = await geocode_zip(zip_code)
+
+            # Find nearest station
+            station_result = await find_nearest_station(
+                location.latitude, location.longitude
+            )
+            station = station_result.station
+
+            # Get tide windows for this station
+            windows = await find_tide_windows_for_station(
+                station=station,
+                max_height_ft=max_height,
+                min_duration_minutes=min_duration,
+                daylight_only=True,
+                work_filter=work_filter_on,
+                days=days,
+            )
+
+            # Render station info
+            distance_display = station_result.distance_display(metric)
+            station_info_html = f"""
+                <div class="station-info">
+                    <h3>{station.name}</h3>
+                    <p>Station ID: {station.id} | {station.state}</p>
+                    <p>Station is {distance_display} away</p>
+                    <p>Timezone: {station.timezone_abbr}</p>
+                </div>
+            """
+
+            # Render windows
+            windows_html = "".join(
+                _render_location_window_entry(w, metric) for w in windows
+            )
+            if not windows:
+                windows_html = '<p class="no-results">No tide windows match your criteria.</p>'
+            else:
+                count = len(windows)
+                suffix = "s" if count != 1 else ""
+                windows_html = f'<p class="result-count">{count} window{suffix} found</p>' + windows_html
+
+        except GeocodingError as e:
+            error_html = f'<p class="error-message">Error: {e}</p>'
+
+    # Build toggle URLs
+    base_params = f"zip_code={zip_code}&max_height={max_height}&min_duration={min_duration}&days={days}"
+    new_work_filter = "off" if work_filter_on else "on"
+    work_toggle_url = f"/location?{base_params}&units={units_param}&work_filter={new_work_filter}"
+    work_toggle_text = "Show all daylight tides" if work_filter_on else "Show outside work hours only"
+    work_filter_status = "Outside work hours" if work_filter_on else "All daylight tides"
+
+    new_units = "metric" if not metric else "imperial"
+    units_toggle_url = f"/location?{base_params}&units={new_units}&work_filter={work_param}"
+    units_toggle_text = "Switch to metric" if not metric else "Switch to imperial"
+    units_display = "m" if metric else "ft"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tide Window Finder by Location</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }}
+            h1 {{
+                color: #1a5f7a;
+            }}
+            .search-form {{
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }}
+            .form-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 15px;
+                align-items: end;
+                margin-bottom: 15px;
+            }}
+            .form-group {{
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }}
+            .form-group label {{
+                font-size: 14px;
+                color: #666;
+            }}
+            .form-group input, .form-group select {{
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 16px;
+                width: 100%;
+                box-sizing: border-box;
+            }}
+            .form-group input[type="number"] {{
+                max-width: 100px;
+            }}
+            .toggle-row {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #eee;
+                margin-bottom: 15px;
+            }}
+            .toggle-item {{
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }}
+            .toggle-label {{
+                font-weight: 500;
+                color: #333;
+            }}
+            .toggle-link {{
+                font-size: 13px;
+                color: #1a5f7a;
+                text-decoration: none;
+            }}
+            .toggle-link:hover {{
+                text-decoration: underline;
+            }}
+            .search-btn {{
+                padding: 10px 30px;
+                background: #1a5f7a;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+            }}
+            .station-info {{
+                background: #e8f4f8;
+                padding: 15px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }}
+            .station-info h3 {{
+                margin: 0 0 10px 0;
+                color: #1a5f7a;
+            }}
+            .station-info p {{
+                margin: 5px 0;
+                color: #555;
+            }}
+            .results {{
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }}
+            .results h2 {{
+                margin-top: 0;
+                color: #1a5f7a;
+            }}
+            .window-entry {{
+                display: flex;
+                gap: 20px;
+                padding: 15px;
+                background: #f9f9f9;
+                border-radius: 5px;
+                margin-bottom: 10px;
+                flex-wrap: wrap;
+            }}
+            .window-date {{
+                font-weight: bold;
+                color: #333;
+                min-width: 150px;
+            }}
+            .window-time {{
+                color: #666;
+                min-width: 160px;
+            }}
+            .window-duration {{
+                color: #1a5f7a;
+                font-weight: bold;
+                min-width: 80px;
+            }}
+            .window-height {{
+                color: #888;
+            }}
+            .window-light {{
+                color: #b8860b;
+                font-size: 14px;
+            }}
+            .no-results {{
+                color: #888;
+                font-style: italic;
+            }}
+            .result-count {{
+                color: #666;
+                margin-bottom: 15px;
+            }}
+            .error-message {{
+                color: #c00;
+                background: #fee;
+                padding: 10px 15px;
+                border-radius: 5px;
+                margin-bottom: 15px;
+            }}
+            @media (max-width: 768px) {{
+                .form-grid {{
+                    grid-template-columns: repeat(2, 1fr);
+                }}
+                .toggle-row {{
+                    flex-direction: column;
+                    gap: 10px;
+                }}
+                .window-entry {{
+                    flex-direction: column;
+                    gap: 5px;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Tide Window Finder by Location</h1>
+        <p>Enter a zip code to find tide windows near any US coastal location</p>
+
+        <form class="search-form" method="get" action="/location">
+            <input type="hidden" name="units" value="{units_param}">
+            <input type="hidden" name="work_filter" value="{work_param}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="zip_code">Zip Code</label>
+                    <input type="text" id="zip_code" name="zip_code"
+                           value="{zip_code}" placeholder="e.g., 92037" maxlength="5" pattern="[0-9]{{5}}">
+                </div>
+                <div class="form-group">
+                    <label for="max_height">Tides below ({height_unit})</label>
+                    <input type="number" id="max_height" name="max_height"
+                           value="{display_height:.1f}" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="min_duration">Min duration</label>
+                    <input type="number" id="min_duration" name="min_duration"
+                           value="{min_duration}" step="30">
+                </div>
+                <div class="form-group">
+                    <label for="days">Days</label>
+                    <select id="days" name="days">
+                        <option value="30" {"selected" if days == 30 else ""}>30</option>
+                        <option value="60" {"selected" if days == 60 else ""}>60</option>
+                        <option value="90" {"selected" if days == 90 else ""}>90</option>
+                    </select>
+                </div>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-item">
+                    <span class="toggle-label">Units: {units_display}</span>
+                    <a href="{units_toggle_url}" class="toggle-link">{units_toggle_text}</a>
+                </div>
+                <div class="toggle-item">
+                    <span class="toggle-label">Showing: {work_filter_status}</span>
+                    <a href="{work_toggle_url}" class="toggle-link">{work_toggle_text}</a>
+                </div>
+            </div>
+            <button type="submit" class="search-btn">Search</button>
+        </form>
+
+        {error_html}
+        {station_info_html}
+
+        <div class="results">
+            <h2>Results</h2>
+            {windows_html}
+        </div>
+
+        <p style="margin-top: 30px;"><a href="/windows">Switch to La Jolla Tide Windows</a></p>
     </body>
     </html>
     """
