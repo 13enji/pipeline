@@ -1,7 +1,9 @@
 """Cache service for tide data."""
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from app.services.noaa import LA_JOLLA_STATION_ID, TideReading, fetch_tide_readings
@@ -10,6 +12,9 @@ from app.services.noaa import LA_JOLLA_STATION_ID, TideReading, fetch_tide_readi
 LA_JOLLA_TZ = ZoneInfo("America/Los_Angeles")
 
 CACHE_TTL_HOURS = 20  # Refresh if cache is older than 20 hours
+
+# File to persist known stations across restarts
+KNOWN_STATIONS_FILE = Path(__file__).parent.parent.parent / "data" / "known_stations.json"
 
 
 @dataclass
@@ -21,8 +26,46 @@ class StationCache:
     timezone: ZoneInfo
 
 
+@dataclass
+class KnownStation:
+    """A station that has been requested and should be refreshed overnight."""
+
+    station_id: str
+    timezone_name: str
+
+    @property
+    def timezone(self) -> ZoneInfo:
+        return ZoneInfo(self.timezone_name)
+
+
 # In-memory cache for 6-minute tide readings, keyed by station ID
 _readings_cache: dict[str, StationCache] = {}
+
+
+def _load_known_stations() -> list[KnownStation]:
+    """Load the list of known stations from disk."""
+    if not KNOWN_STATIONS_FILE.exists():
+        return []
+    try:
+        data = json.loads(KNOWN_STATIONS_FILE.read_text())
+        return [KnownStation(**s) for s in data]
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
+def _save_known_stations(stations: list[KnownStation]) -> None:
+    """Save the list of known stations to disk."""
+    KNOWN_STATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    data = [{"station_id": s.station_id, "timezone_name": s.timezone_name} for s in stations]
+    KNOWN_STATIONS_FILE.write_text(json.dumps(data, indent=2))
+
+
+def _add_known_station(station_id: str, tz: ZoneInfo) -> None:
+    """Add a station to the known stations list if not already present."""
+    stations = _load_known_stations()
+    if not any(s.station_id == station_id for s in stations):
+        stations.append(KnownStation(station_id=station_id, timezone_name=str(tz)))
+        _save_known_stations(stations)
 
 
 def _is_cache_valid(station_id: str, tz: ZoneInfo) -> bool:
@@ -52,6 +95,9 @@ async def get_tide_readings_cached(
     Returns:
         List of TideReading objects
     """
+    # Track this station for overnight refresh
+    _add_known_station(station_id, tz)
+
     if not force_refresh and _is_cache_valid(station_id, tz):
         return _readings_cache[station_id].readings
 
@@ -92,17 +138,45 @@ async def get_tide_readings(force_refresh: bool = False) -> list[TideReading]:
 
 async def refresh_cache() -> dict[str, object]:
     """
-    Force refresh the tide readings cache for La Jolla.
+    Force refresh the tide readings cache for all known stations.
 
     Returns:
-        Dict with refresh status and stats
+        Dict with refresh status and stats for each station
     """
-    readings = await get_tide_readings(force_refresh=True)
-    cache_entry = _readings_cache.get(LA_JOLLA_STATION_ID)
+    stations = _load_known_stations()
+
+    # Always include La Jolla
+    if not any(s.station_id == LA_JOLLA_STATION_ID for s in stations):
+        stations.append(KnownStation(
+            station_id=LA_JOLLA_STATION_ID,
+            timezone_name=str(LA_JOLLA_TZ),
+        ))
+        _save_known_stations(stations)
+
+    results = {}
+    for station in stations:
+        try:
+            readings = await get_tide_readings_cached(
+                station_id=station.station_id,
+                tz=station.timezone,
+                force_refresh=True,
+            )
+            cache_entry = _readings_cache.get(station.station_id)
+            results[station.station_id] = {
+                "status": "ok",
+                "readings_count": len(readings),
+                "fetched_at": cache_entry.fetched_at.isoformat() if cache_entry else None,
+            }
+        except Exception as e:
+            results[station.station_id] = {
+                "status": "error",
+                "error": str(e),
+            }
+
     return {
         "status": "ok",
-        "readings_count": len(readings),
-        "fetched_at": cache_entry.fetched_at.isoformat() if cache_entry else None,
+        "stations_refreshed": len(results),
+        "stations": results,
     }
 
 
@@ -133,9 +207,12 @@ async def refresh_station_cache(station_id: str, tz: ZoneInfo) -> dict[str, obje
 
 def get_cache_stats() -> dict[str, object]:
     """Get statistics about cached stations."""
-    stats = {}
+    stats = {
+        "in_memory": {},
+        "known_stations": [s.station_id for s in _load_known_stations()],
+    }
     for station_id, cache_entry in _readings_cache.items():
-        stats[station_id] = {
+        stats["in_memory"][station_id] = {
             "readings_count": len(cache_entry.readings),
             "fetched_at": cache_entry.fetched_at.isoformat(),
             "timezone": str(cache_entry.timezone),
