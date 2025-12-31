@@ -146,6 +146,7 @@ Two-step API call:
 - Provides 7 days of hourly forecasts
 - Returns temperature and precipitation probability per hour
 - 60-minute cache TTL (weather changes frequently)
+- **Location**: Weather is fetched for the tide station coordinates, not the user's search location (user will be AT the station for tidepooling)
 
 **Weather Source Links**: Weather text is clickable, linking to the NWS graphical forecast page:
 ```
