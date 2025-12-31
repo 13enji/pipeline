@@ -10,6 +10,7 @@ Tide window finder web application built with FastAPI. Helps find optimal low-ti
 - **Filters** - Work hours filter (outside M-F 9-5), daylight only, minimum duration
 - **Units** - Toggle between imperial (ft/miles) and metric (m/km)
 - **Light Times** - Shows first/last light times for each window
+- **Weather Forecasts** - Temperature range and precipitation chance for windows within 7 days
 - **Saved Preferences** - Remembers your settings (zip code, filters, units) in cookies
 
 ## Endpoints

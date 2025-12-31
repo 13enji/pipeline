@@ -2,24 +2,19 @@
 
 ## Planned Features (in priority order)
 
-### 1. Weather integration
-- Show temp (high/low) and % chance of rain for windows within 7 days
-- Use Weather.gov (NWS) API - free, no key, no rate limits
-- Display inline with each window entry
-
-### 2. GPS location (future)
+### 1. GPS location (future)
 - Auto-detect user location from device
 
-### 3. Branding/domain (future)
+### 2. Branding/domain (future)
 - Custom domain styling when deployed to own domain
 
-### 4. Configurable work hours
+### 3. Configurable work hours
 - Default to 9-5 M-F
 - Allow user to override start/end times
 - Time-of-day filters: morning only, afternoon only, weekends only
 - Multiple selections allowed (e.g., "mornings and weekends")
 
-### 5. Calendar view for windows
+### 4. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
 ---
@@ -54,3 +49,8 @@
   - Remembers: zip code, threshold, min duration, days, units, work filter
   - Shared between /windows and /location pages
   - Reset to defaults button available
+- Weather integration for tide windows
+  - Shows temperature range and precipitation chance for windows within 7 days
+  - Uses NWS (Weather.gov) API - free, no rate limits
+  - 60-minute cache TTL for weather data
+  - Displays inline with each window entry

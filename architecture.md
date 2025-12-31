@@ -67,6 +67,7 @@ pipeline/
 │       ├── noaa.py          # NOAA API client
 │       ├── preferences.py   # Cookie-based user preferences
 │       ├── stations.py      # NOAA station lookup
+│       ├── weather.py       # NWS weather forecasts
 │       ├── tides.py         # Tide processing for dashboard
 │       ├── twilight.py      # Dawn/dusk calculations
 │       └── windows.py       # Window finding for La Jolla
@@ -76,6 +77,7 @@ pipeline/
 │   ├── location.feature     # Location-based tide windows
 │   ├── preferences.feature  # User preferences
 │   ├── tides.feature        # Tide dashboard
+│   ├── weather.feature      # Weather integration
 │   └── windows.feature      # Window finder
 ├── tests/
 │   ├── conftest.py          # Shared pytest fixtures
@@ -83,6 +85,7 @@ pipeline/
 │       ├── test_location.py
 │       ├── test_preferences.py
 │       ├── test_tides.py
+│       ├── test_weather.py
 │       └── test_windows.py
 ├── .github/
 │   └── workflows/
@@ -123,6 +126,19 @@ Base URL: `https://api.zippopotam.us/us/{zip_code}`
 
 - Free, no API key required
 - Returns latitude/longitude for US zip codes
+
+### Weather (NWS / Weather.gov)
+
+Base URL: `https://api.weather.gov`
+
+Two-step API call:
+1. `/points/{lat},{lon}` - Get grid point and forecast URL
+2. `/gridpoints/{office}/{x},{y}/forecast/hourly` - Get hourly forecasts
+
+- Free, no API key required, no rate limits
+- Provides 7 days of hourly forecasts
+- Returns temperature and precipitation probability per hour
+- 60-minute cache TTL (weather changes frequently)
 
 ## Caching Architecture
 
@@ -245,3 +261,4 @@ On every push:
 | Caching | In-memory + file | Simple, no database needed, persists station list |
 | Reference Stations Only | Filter type="R" | Subordinate stations don't return MLLW predictions |
 | User Preferences | Cookies | Server-side rendering, no flash of defaults, 1-year expiry |
+| Weather Data | NWS API | Free, no rate limits, hourly forecasts, 60-min cache |

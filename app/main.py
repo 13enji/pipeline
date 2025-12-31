@@ -17,6 +17,11 @@ from app.services.preferences import (
 )
 from app.services.stations import StationWithDistance, find_nearest_station
 from app.services.tides import ProcessedTide, TideCard, get_tide_cards
+from app.services.weather import (
+    WindowWeather,
+    get_hourly_forecasts,
+    get_weather_for_window,
+)
 from app.services.windows import TideWindow, find_tide_windows
 
 
@@ -334,15 +339,22 @@ async def tide_dashboard(
     """
 
 
-def _render_window_entry(window: TideWindow, metric: bool) -> str:
+def _render_window_entry(
+    window: TideWindow, metric: bool, weather: WindowWeather | None = None
+) -> str:
     """Render a single tide window as HTML."""
+    weather_html = ""
+    if weather:
+        weather_html = f"""
+            <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
+        """
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
             <div class="window-time">{window.formatted_time_range}</div>
             <div class="window-duration">{window.duration_display}</div>
             <div class="window-height">Low: {window.min_height_display(metric)}</div>
-            <div class="window-light">{window.relevant_light_display}</div>
+            <div class="window-light">{window.relevant_light_display}</div>{weather_html}
         </div>
     """
 
@@ -383,6 +395,14 @@ async def tide_windows(
         days=days,
     )
 
+    # Fetch weather for La Jolla (default zip 92037)
+    forecasts = []
+    try:
+        location = await geocode_zip("92037")
+        forecasts = await get_hourly_forecasts(location.latitude, location.longitude)
+    except GeocodingError:
+        pass  # Weather will just not be shown
+
     # Update preferences (keep zip_code from saved prefs)
     new_prefs = UserPreferences(
         zip_code=prefs.zip_code,
@@ -393,7 +413,12 @@ async def tide_windows(
         work_filter=work_filter,
     )
 
-    windows_html = "".join(_render_window_entry(w, metric) for w in windows)
+    # Render windows with weather
+    def render_with_weather(w: TideWindow) -> str:
+        weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
+        return _render_window_entry(w, metric, weather)
+
+    windows_html = "".join(render_with_weather(w) for w in windows)
     if not windows:
         windows_html = '<p class="no-results">No tide windows match your criteria.</p>'
 
@@ -544,6 +569,12 @@ async def tide_windows(
                 color: #b8860b;
                 font-size: 14px;
             }}
+            .window-weather {{
+                color: #2e7d32;
+                font-size: 14px;
+                width: 100%;
+                margin-top: 5px;
+            }}
             .no-results {{
                 color: #888;
                 font-style: italic;
@@ -628,15 +659,22 @@ async def tide_windows(
     return response
 
 
-def _render_location_window_entry(window: LocationTideWindow, metric: bool) -> str:
+def _render_location_window_entry(
+    window: LocationTideWindow, metric: bool, weather: WindowWeather | None = None
+) -> str:
     """Render a single location-based tide window as HTML."""
+    weather_html = ""
+    if weather:
+        weather_html = f"""
+            <div class="window-weather">{weather.temp_display(metric)}  {weather.precip_display()}</div>
+        """
     return f"""
         <div class="window-entry">
             <div class="window-date">{window.formatted_date}</div>
             <div class="window-time">{window.formatted_time_range}</div>
             <div class="window-duration">{window.duration_display}</div>
             <div class="window-height">Low: {window.min_height_display(metric)}</div>
-            <div class="window-light">{window.relevant_light_display}</div>
+            <div class="window-light">{window.relevant_light_display}</div>{weather_html}
         </div>
     """
 
@@ -714,6 +752,11 @@ async def location_tide_windows(
                 days=days,
             )
 
+            # Fetch weather for zip code location
+            forecasts = await get_hourly_forecasts(
+                location.latitude, location.longitude
+            )
+
             # Render station info
             distance_display = station_result.distance_display(metric)
             station_info_html = f"""
@@ -725,10 +768,12 @@ async def location_tide_windows(
                 </div>
             """
 
-            # Render windows
-            windows_html = "".join(
-                _render_location_window_entry(w, metric) for w in windows
-            )
+            # Render windows with weather
+            def render_with_weather(w: LocationTideWindow) -> str:
+                weather = get_weather_for_window(forecasts, w.start_time, w.end_time)
+                return _render_location_window_entry(w, metric, weather)
+
+            windows_html = "".join(render_with_weather(w) for w in windows)
             if not windows:
                 windows_html = '<p class="no-results">No tide windows match your criteria.</p>'
             else:
@@ -894,6 +939,12 @@ async def location_tide_windows(
             .window-light {{
                 color: #b8860b;
                 font-size: 14px;
+            }}
+            .window-weather {{
+                color: #2e7d32;
+                font-size: 14px;
+                width: 100%;
+                margin-top: 5px;
             }}
             .no-results {{
                 color: #888;
