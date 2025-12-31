@@ -1,11 +1,20 @@
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI, Form, Query
 from fastapi.responses import HTMLResponse
 
+from app.services.cache import refresh_cache
 from app.services.tides import ProcessedTide, TideCard, get_tide_cards
+from app.services.windows import TideWindow, find_tide_windows
 
 app = FastAPI(title="Pipeline", version="0.1.0")
+
+
+@app.post("/refresh-tides")
+async def refresh_tides() -> dict[str, Any]:
+    """Force refresh the tide cache. Called by scheduled job."""
+    return await refresh_cache()
 
 
 def get_current_time() -> datetime:
@@ -293,6 +302,251 @@ async def tide_dashboard(
         <div class="tide-cards">
             {cards_html}
         </div>
+
+        <p style="margin-top: 30px;"><a href="/windows">Switch to Tide Window Finder</a></p>
+    </body>
+    </html>
+    """
+
+
+def _render_window_entry(window: TideWindow, metric: bool) -> str:
+    """Render a single tide window as HTML."""
+    return f"""
+        <div class="window-entry">
+            <div class="window-date">{window.formatted_date}</div>
+            <div class="window-time">{window.formatted_time_range}</div>
+            <div class="window-duration">{window.duration_display}</div>
+            <div class="window-height">
+                Low: {window.min_height_display(metric)}
+            </div>
+        </div>
+    """
+
+
+@app.get("/windows", response_class=HTMLResponse)
+async def tide_windows(
+    max_height: float = Query(1.0),
+    min_duration: int = Query(60),
+    units: str = Query("imperial"),
+    work_filter: str = Query("on"),
+    days: int = Query(30),
+) -> str:
+    """Tide window finder showing periods below a height threshold."""
+    metric = units.lower() == "metric"
+    work_filter_on = work_filter.lower() == "on"
+
+    windows = await find_tide_windows(
+        max_height_ft=max_height,
+        min_duration_minutes=min_duration,
+        daylight_only=True,
+        work_filter=work_filter_on,
+        days=days,
+    )
+
+    windows_html = "".join(_render_window_entry(w, metric) for w in windows)
+    if not windows:
+        windows_html = '<p class="no-results">No tide windows match your criteria.</p>'
+
+    # Build form values
+    work_param = "on" if work_filter_on else "off"
+    units_param = "metric" if metric else "imperial"
+    height_unit = "m" if metric else "ft"
+    display_height = max_height * 0.3048 if metric else max_height
+
+    base_params = f"max_height={max_height}&min_duration={min_duration}&days={days}"
+    new_work_filter = "off" if work_filter_on else "on"
+    work_toggle_url = f"/windows?{base_params}&units={units_param}&work_filter={new_work_filter}"
+    work_toggle_text = "Show All Daylight" if work_filter_on else "Outside Work Hours Only"
+    work_filter_status = "Outside work hours" if work_filter_on else "All daylight"
+
+    new_units = "metric" if not metric else "imperial"
+    units_toggle_url = f"/windows?{base_params}&units={new_units}&work_filter={work_param}"
+    units_toggle_text = "Switch to Metric" if not metric else "Switch to Imperial"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tide Window Finder - San Diego</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }}
+            h1 {{
+                color: #1a5f7a;
+            }}
+            .controls {{
+                margin-bottom: 20px;
+            }}
+            .toggle-btn {{
+                padding: 10px 20px;
+                background: #1a5f7a;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                text-decoration: none;
+                margin-right: 5px;
+            }}
+            .unit-label {{
+                margin-left: 10px;
+                color: #666;
+            }}
+            .search-form {{
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }}
+            .form-row {{
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                align-items: end;
+            }}
+            .form-group {{
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }}
+            .form-group label {{
+                font-size: 14px;
+                color: #666;
+            }}
+            .form-group input, .form-group select {{
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 16px;
+            }}
+            .search-btn {{
+                padding: 10px 30px;
+                background: #1a5f7a;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+            }}
+            .results {{
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }}
+            .results h2 {{
+                margin-top: 0;
+                color: #1a5f7a;
+            }}
+            .window-entry {{
+                display: flex;
+                gap: 20px;
+                padding: 15px;
+                background: #f9f9f9;
+                border-radius: 5px;
+                margin-bottom: 10px;
+                flex-wrap: wrap;
+            }}
+            .window-date {{
+                font-weight: bold;
+                color: #333;
+                min-width: 150px;
+            }}
+            .window-time {{
+                color: #666;
+                min-width: 140px;
+            }}
+            .window-duration {{
+                color: #1a5f7a;
+                font-weight: bold;
+                min-width: 80px;
+            }}
+            .window-height {{
+                color: #888;
+            }}
+            .no-results {{
+                color: #888;
+                font-style: italic;
+            }}
+            .result-count {{
+                color: #666;
+                margin-bottom: 15px;
+            }}
+            @media (max-width: 768px) {{
+                .controls {{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }}
+                .toggle-btn {{
+                    display: block;
+                    text-align: center;
+                    margin-right: 0;
+                }}
+                .unit-label {{
+                    margin-left: 0;
+                    text-align: center;
+                }}
+                .form-row {{
+                    flex-direction: column;
+                }}
+                .window-entry {{
+                    flex-direction: column;
+                    gap: 5px;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Tide Window Finder - San Diego</h1>
+        <p>Find times when the tide is below your target height</p>
+
+        <div class="controls">
+            <a href="{units_toggle_url}" class="toggle-btn">{units_toggle_text}</a>
+            <span class="unit-label">Units: {height_unit}</span>
+            <a href="{work_toggle_url}" class="toggle-btn">{work_toggle_text}</a>
+            <span class="unit-label">Filter: {work_filter_status}</span>
+        </div>
+
+        <form class="search-form" method="get" action="/windows">
+            <input type="hidden" name="units" value="{units_param}">
+            <input type="hidden" name="work_filter" value="{work_param}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="max_height">Max tide height ({height_unit})</label>
+                    <input type="number" id="max_height" name="max_height"
+                           value="{display_height:.1f}" step="0.1" min="-2" max="8">
+                </div>
+                <div class="form-group">
+                    <label for="min_duration">Min duration (minutes)</label>
+                    <input type="number" id="min_duration" name="min_duration"
+                           value="{min_duration}" step="30" min="30" max="480">
+                </div>
+                <div class="form-group">
+                    <label for="days">Days to search</label>
+                    <select id="days" name="days">
+                        <option value="30" {"selected" if days == 30 else ""}>30 days</option>
+                        <option value="60" {"selected" if days == 60 else ""}>60 days</option>
+                        <option value="90" {"selected" if days == 90 else ""}>90 days</option>
+                    </select>
+                </div>
+                <button type="submit" class="search-btn">Search</button>
+            </div>
+        </form>
+
+        <div class="results">
+            <h2>Results</h2>
+            <p class="result-count">{len(windows)} window{"s" if len(windows) != 1 else ""} found</p>
+            {windows_html}
+        </div>
+
+        <p style="margin-top: 30px;"><a href="/tides">Switch to Top Tides Dashboard</a></p>
     </body>
     </html>
     """
