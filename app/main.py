@@ -325,9 +325,8 @@ def _render_window_entry(window: TideWindow, metric: bool) -> str:
             <div class="window-date">{window.formatted_date}</div>
             <div class="window-time">{window.formatted_time_range}</div>
             <div class="window-duration">{window.duration_display}</div>
-            <div class="window-height">
-                Low: {window.min_height_display(metric)}
-            </div>
+            <div class="window-height">Low: {window.min_height_display(metric)}</div>
+            <div class="window-light">{window.relevant_light_display}</div>
         </div>
     """
 
@@ -493,6 +492,10 @@ async def tide_windows(
             }}
             .window-height {{
                 color: #888;
+            }}
+            .window-light {{
+                color: #b8860b;
+                font-size: 14px;
             }}
             .no-results {{
                 color: #888;

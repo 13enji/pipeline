@@ -28,6 +28,7 @@ Feature: Tide window finder for tidepooling
     And I should see the time range (start - end)
     And I should see the duration
     And I should see the lowest tide height during the window
+    And I should see the relevant light time (first or last)
 
   # --- Threshold Behavior ---
 
@@ -57,11 +58,48 @@ Feature: Tide window finder for tidepooling
     When I search for tide windows
     Then that window should appear in results
 
-  # --- Daylight and Work Hours Filters ---
+  # --- Daylight Filtering and Light Times ---
 
-  Scenario: Only daylight windows are shown
+  Scenario: Morning window shows first light
+    Given a tide window in the morning
+    When I view that window in results
+    Then I should see first light time (not last light)
+
+  Scenario: Evening window shows last light
+    Given a tide window in the evening
+    When I view that window in results
+    Then I should see last light time (not first light)
+
+  Scenario: Window with sufficient daylight overlap is included
+    # Daylight portion (6:00am-9:00am = 180 min) exceeds min duration
+    Given a tide window from 5:00am to 9:00am
+    And first light is at 6:00am on that day
+    And the min duration is 60 minutes
     When I search for tide windows
-    Then all results should be during extended daylight hours
+    Then that window should be included
+
+  Scenario: Window with insufficient daylight overlap is excluded
+    # Daylight portion (6:00am-6:30am = 30 min) is less than min duration
+    Given a tide window from 4:00am to 6:30am
+    And first light is at 6:00am on that day
+    And the min duration is 60 minutes
+    When I search for tide windows
+    Then that window should not be included
+
+  Scenario: Window completely outside daylight is excluded
+    Given a tide window from 3:00am to 5:00am
+    And first light is at 6:00am on that day
+    When I search for tide windows
+    Then that window should not be included
+
+  Scenario: Show full window time even when extending past daylight
+    Given a tide window from 5:00am to 9:00am
+    And first light is at 6:00am on that day
+    When I view that window in results
+    Then the time range should show "5:00am - 9:00am"
+    And it should show "First light: 6:00am"
+
+  # --- Work Hours Filter ---
 
   Scenario: Work hours filter is on by default
     When I visit the tide window finder

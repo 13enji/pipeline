@@ -9,7 +9,6 @@ from app.services.tides import is_outside_work_hours
 from app.services.twilight import (
     LA_JOLLA_TZ,
     get_daylight_window,
-    is_during_extended_daylight,
 )
 
 
@@ -22,6 +21,8 @@ class TideWindow:
     min_height_ft: float
     max_height_ft: float
     avg_height_ft: float
+    first_light: datetime | None = None
+    last_light: datetime | None = None
 
     @property
     def duration_minutes(self) -> int:
@@ -69,6 +70,31 @@ class TideWindow:
         if metric:
             return f"{self.max_height_ft * 0.3048:.2f}m"
         return f"{self.max_height_ft:.1f}ft"
+
+    @property
+    def is_morning_window(self) -> bool:
+        """Check if this is a morning window (closer to dawn than dusk)."""
+        if self.first_light is None or self.last_light is None:
+            return True  # Default to morning if no light data
+        middle = self.start_time + (self.end_time - self.start_time) / 2
+        if middle.tzinfo is None:
+            middle = middle.replace(tzinfo=LA_JOLLA_TZ)
+        # Compare middle of window to midpoint of daylight
+        daylight_midpoint = self.first_light + (self.last_light - self.first_light) / 2
+        return middle < daylight_midpoint
+
+    @property
+    def relevant_light_display(self) -> str:
+        """Get the relevant light time display (first light for morning, last light for evening)."""
+        if self.is_morning_window:
+            if self.first_light:
+                time_str = self.first_light.strftime("%I:%M%p").lstrip("0").lower()
+                return f"First light: {time_str}"
+        else:
+            if self.last_light:
+                time_str = self.last_light.strftime("%I:%M%p").lstrip("0").lower()
+                return f"Last light: {time_str}"
+        return ""
 
 
 def _find_windows_in_readings(
@@ -129,14 +155,40 @@ def _find_windows_in_readings(
     return windows
 
 
-def _is_window_during_daylight(window: TideWindow) -> bool:
-    """Check if the majority of a window is during daylight hours."""
-    # Check middle of window for daylight
-    middle_time = window.start_time + (window.end_time - window.start_time) / 2
-    if middle_time.tzinfo is None:
-        middle_time = middle_time.replace(tzinfo=LA_JOLLA_TZ)
-    daylight = get_daylight_window(middle_time)
-    return is_during_extended_daylight(middle_time, daylight)
+def _get_daylight_overlap_minutes(window: TideWindow) -> int:
+    """
+    Calculate the overlap between a window and daylight hours (civil dawn to dusk).
+
+    Returns:
+        Number of minutes the window overlaps with daylight
+    """
+    start = window.start_time
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=LA_JOLLA_TZ)
+
+    daylight = get_daylight_window(start)
+
+    # Calculate overlap between window and daylight
+    overlap_start = max(start, daylight.civil_dawn)
+    overlap_end = min(window.end_time.replace(tzinfo=LA_JOLLA_TZ), daylight.civil_dusk)
+
+    if overlap_start >= overlap_end:
+        return 0  # No overlap
+
+    return int((overlap_end - overlap_start).total_seconds() / 60)
+
+
+def _add_light_times_to_window(window: TideWindow) -> TideWindow:
+    """Add first_light and last_light times to a window."""
+    start = window.start_time
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=LA_JOLLA_TZ)
+
+    daylight = get_daylight_window(start)
+
+    window.first_light = daylight.civil_dawn
+    window.last_light = daylight.civil_dusk
+    return window
 
 
 def _is_window_outside_work_hours(window: TideWindow) -> bool:
@@ -178,12 +230,15 @@ async def find_tide_windows(
     # Find all windows below threshold
     windows = _find_windows_in_readings(filtered_readings, max_height_ft)
 
-    # Filter by duration
-    windows = [w for w in windows if w.duration_minutes >= min_duration_minutes]
-
-    # Filter by daylight
+    # Filter by daylight overlap (must have min_duration minutes of daylight)
     if daylight_only:
-        windows = [w for w in windows if _is_window_during_daylight(w)]
+        windows = [
+            w for w in windows
+            if _get_daylight_overlap_minutes(w) >= min_duration_minutes
+        ]
+
+    # Add light times to each window
+    windows = [_add_light_times_to_window(w) for w in windows]
 
     # Filter by work hours
     if work_filter:
