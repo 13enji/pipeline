@@ -1,10 +1,11 @@
 """Location-based tide window finding service."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.services.noaa import TideReading, fetch_tide_readings
+from app.services.cache import get_tide_readings_cached
+from app.services.noaa import TideReading
 from app.services.stations import Station
 from app.services.tides import is_outside_work_hours
 from app.services.twilight import get_daylight_window_for_location
@@ -224,12 +225,11 @@ async def find_tide_windows_for_station(
     tz = station.timezone
     tz_abbr = station.timezone_abbr
 
-    # Fetch readings for this station
-    now = datetime.now(tz)
-    readings = await fetch_tide_readings(
+    # Get readings for this station (uses cache if available)
+    readings = await get_tide_readings_cached(
         station_id=station.id,
-        begin_date=now,
-        end_date=now + timedelta(days=days),
+        tz=tz,
+        days=days,
     )
 
     # Find all windows below threshold
