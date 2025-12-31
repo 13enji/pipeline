@@ -19,6 +19,7 @@ class TideWindow:
     start_time: datetime
     end_time: datetime
     min_height_ft: float
+    min_height_time: datetime
     max_height_ft: float
     avg_height_ft: float
     first_light: datetime | None = None
@@ -60,10 +61,11 @@ class TideWindow:
         return f"{start} - {end}"
 
     def min_height_display(self, metric: bool = False) -> str:
-        """Get formatted minimum height with units."""
+        """Get formatted minimum height with units and time."""
+        time_str = self.min_height_time.strftime("%I:%M%p").lstrip("0").lower()
         if metric:
-            return f"{self.min_height_ft * 0.3048:.2f}m"
-        return f"{self.min_height_ft:.1f}ft"
+            return f"{self.min_height_ft * 0.3048:.2f}m @ {time_str}"
+        return f"{self.min_height_ft:.1f}ft @ {time_str}"
 
     def max_height_display(self, metric: bool = False) -> str:
         """Get formatted maximum height with units."""
@@ -97,6 +99,15 @@ class TideWindow:
         return ""
 
 
+def _find_min_reading(readings: list[TideReading]) -> TideReading:
+    """Find the first reading with the minimum height."""
+    min_height = min(r.height_ft for r in readings)
+    for r in readings:
+        if r.height_ft == min_height:
+            return r
+    return readings[0]  # Fallback, should never reach here
+
+
 def _find_windows_in_readings(
     readings: list[TideReading],
     max_height_ft: float,
@@ -126,12 +137,14 @@ def _find_windows_in_readings(
         else:
             # Window ended
             if window_start is not None and len(window_readings) > 0:
+                min_reading = _find_min_reading(window_readings)
                 heights = [r.height_ft for r in window_readings]
                 windows.append(
                     TideWindow(
                         start_time=window_start,
                         end_time=window_readings[-1].time,
-                        min_height_ft=min(heights),
+                        min_height_ft=min_reading.height_ft,
+                        min_height_time=min_reading.time,
                         max_height_ft=max(heights),
                         avg_height_ft=sum(heights) / len(heights),
                     )
@@ -141,12 +154,14 @@ def _find_windows_in_readings(
 
     # Handle window at end of readings
     if window_start is not None and len(window_readings) > 0:
+        min_reading = _find_min_reading(window_readings)
         heights = [r.height_ft for r in window_readings]
         windows.append(
             TideWindow(
                 start_time=window_start,
                 end_time=window_readings[-1].time,
-                min_height_ft=min(heights),
+                min_height_ft=min_reading.height_ft,
+                min_height_time=min_reading.time,
                 max_height_ft=max(heights),
                 avg_height_ft=sum(heights) / len(heights),
             )

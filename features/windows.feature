@@ -27,8 +27,18 @@ Feature: Tide window finder for tidepooling
     Then I should see the day of week and date
     And I should see the time range (start - end)
     And I should see the duration
-    And I should see the lowest tide height during the window
+    And I should see the lowest tide height with its time
     And I should see the relevant light time (first or last)
+
+  Scenario: Low tide time format
+    When I view a tide window result
+    Then the low tide should display as height and time on same line
+    # Example: "Low: -1.5ft @ 2:42pm"
+
+  Scenario: Multiple readings with same minimum height
+    Given a window where two readings have the same lowest height
+    When I view that window
+    Then the time shown should be from the first reading
 
   # --- Threshold Behavior ---
 
