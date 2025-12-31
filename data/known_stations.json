@@ -14,5 +14,13 @@
     "state": "NY",
     "latitude": 40.7033,
     "longitude": -73.995
+  },
+  {
+    "station_id": "9414290",
+    "timezone_name": "America/Los_Angeles",
+    "name": "SAN FRANCISCO (Golden Gate)",
+    "state": "CA",
+    "latitude": 37.80630555555555,
+    "longitude": -122.4658888888889
   }
 ]

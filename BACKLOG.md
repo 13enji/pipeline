@@ -2,28 +2,24 @@
 
 ## Planned Features (in priority order)
 
-### 1. Save user preferences
-- Save last location + filter preferences in localStorage
-- Remembers: zip code, work hours filter, threshold, duration, days
-
-### 2. Weather integration
+### 1. Weather integration
 - Show temp (high/low) and % chance of rain for windows within 7 days
 - Use Weather.gov (NWS) API - free, no key, no rate limits
 - Display inline with each window entry
 
-### 3. GPS location (future)
+### 2. GPS location (future)
 - Auto-detect user location from device
 
-### 4. Branding/domain (future)
+### 3. Branding/domain (future)
 - Custom domain styling when deployed to own domain
 
-### 5. Configurable work hours
+### 4. Configurable work hours
 - Default to 9-5 M-F
 - Allow user to override start/end times
 - Time-of-day filters: morning only, afternoon only, weekends only
 - Multiple selections allowed (e.g., "mornings and weekends")
 
-### 6. Calendar view for windows
+### 5. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
 ---
@@ -54,3 +50,7 @@
   - Stations persist across Railway deploys
 - Removed minimum duration constraint
   - Users can now set any duration (including 0 minutes)
+- User preferences saved in cookies
+  - Remembers: zip code, threshold, min duration, days, units, work filter
+  - Shared between /windows and /location pages
+  - Reset to defaults button available

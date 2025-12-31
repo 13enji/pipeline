@@ -2,13 +2,19 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, Form, Query
+from fastapi import FastAPI, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse
 
 from app.services.cache import get_cache_stats, get_tide_readings, refresh_cache
 from app.services.geocoding import GeocodingError, geocode_zip
 from app.services.location_windows import TideWindow as LocationTideWindow
 from app.services.location_windows import find_tide_windows_for_station
+from app.services.preferences import (
+    UserPreferences,
+    clear_preferences,
+    load_preferences,
+    save_preferences,
+)
 from app.services.stations import StationWithDistance, find_nearest_station
 from app.services.tides import ProcessedTide, TideCard, get_tide_cards
 from app.services.windows import TideWindow, find_tide_windows
@@ -343,13 +349,29 @@ def _render_window_entry(window: TideWindow, metric: bool) -> str:
 
 @app.get("/windows", response_class=HTMLResponse)
 async def tide_windows(
-    max_height: float = Query(-0.5),
-    min_duration: int = Query(60),
-    units: str = Query("imperial"),
-    work_filter: str = Query("on"),
-    days: int = Query(90),
-) -> str:
+    request: Request,
+    max_height: float | None = Query(None),
+    min_duration: int | None = Query(None),
+    units: str | None = Query(None),
+    work_filter: str | None = Query(None),
+    days: int | None = Query(None),
+    reset: bool = Query(False),
+) -> Response:
     """Tide window finder showing periods below a height threshold."""
+    # Load saved preferences
+    prefs = load_preferences(request)
+
+    # Handle reset
+    if reset:
+        prefs = UserPreferences()
+
+    # Use query params if provided, otherwise use saved preferences
+    max_height = max_height if max_height is not None else prefs.max_height
+    min_duration = min_duration if min_duration is not None else prefs.min_duration
+    units = units if units is not None else prefs.units
+    work_filter = work_filter if work_filter is not None else prefs.work_filter
+    days = days if days is not None else prefs.days
+
     metric = units.lower() == "metric"
     work_filter_on = work_filter.lower() == "on"
 
@@ -359,6 +381,16 @@ async def tide_windows(
         daylight_only=True,
         work_filter=work_filter_on,
         days=days,
+    )
+
+    # Update preferences (keep zip_code from saved prefs)
+    new_prefs = UserPreferences(
+        zip_code=prefs.zip_code,
+        max_height=max_height,
+        min_duration=min_duration,
+        days=days,
+        units=units,
+        work_filter=work_filter,
     )
 
     windows_html = "".join(_render_window_entry(w, metric) for w in windows)
@@ -382,7 +414,7 @@ async def tide_windows(
     units_toggle_text = "Switch to metric" if not metric else "Switch to imperial"
     units_display = "m" if metric else "ft"
 
-    return f"""
+    html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -466,6 +498,11 @@ async def tide_windows(
                 border-radius: 5px;
                 cursor: pointer;
                 font-size: 16px;
+            }}
+            .reset-link {{
+                margin-left: 15px;
+                color: #888;
+                font-size: 14px;
             }}
             .results {{
                 background: white;
@@ -568,6 +605,7 @@ async def tide_windows(
                 </div>
             </div>
             <button type="submit" class="search-btn">Search</button>
+            <a href="/windows?reset=true" class="reset-link">Reset to defaults</a>
         </form>
 
         <div class="results">
@@ -580,6 +618,14 @@ async def tide_windows(
     </body>
     </html>
     """
+
+    # Create response and save preferences
+    response = HTMLResponse(content=html_content)
+    if reset:
+        clear_preferences(response)
+    else:
+        save_preferences(response, new_prefs)
+    return response
 
 
 def _render_location_window_entry(window: LocationTideWindow, metric: bool) -> str:
@@ -597,14 +643,31 @@ def _render_location_window_entry(window: LocationTideWindow, metric: bool) -> s
 
 @app.get("/location", response_class=HTMLResponse)
 async def location_tide_windows(
-    zip_code: str = Query("92037"),
-    max_height: float = Query(-0.5),
-    min_duration: int = Query(60),
-    units: str = Query("imperial"),
-    work_filter: str = Query("on"),
-    days: int = Query(90),
-) -> str:
+    request: Request,
+    zip_code: str | None = Query(None),
+    max_height: float | None = Query(None),
+    min_duration: int | None = Query(None),
+    units: str | None = Query(None),
+    work_filter: str | None = Query(None),
+    days: int | None = Query(None),
+    reset: bool = Query(False),
+) -> Response:
     """Location-based tide window finder."""
+    # Load saved preferences
+    prefs = load_preferences(request)
+
+    # Handle reset
+    if reset:
+        prefs = UserPreferences()
+
+    # Use query params if provided, otherwise use saved preferences
+    zip_code = zip_code if zip_code is not None else prefs.zip_code
+    max_height = max_height if max_height is not None else prefs.max_height
+    min_duration = min_duration if min_duration is not None else prefs.min_duration
+    units = units if units is not None else prefs.units
+    work_filter = work_filter if work_filter is not None else prefs.work_filter
+    days = days if days is not None else prefs.days
+
     metric = units.lower() == "metric"
     work_filter_on = work_filter.lower() == "on"
 
@@ -613,6 +676,16 @@ async def location_tide_windows(
     work_param = "on" if work_filter_on else "off"
     height_unit = "m" if metric else "ft"
     display_height = max_height * 0.3048 if metric else max_height
+
+    # Update preferences
+    new_prefs = UserPreferences(
+        zip_code=zip_code,
+        max_height=max_height,
+        min_duration=min_duration,
+        days=days,
+        units=units,
+        work_filter=work_filter,
+    )
 
     # Default content when no zip code entered
     station_info_html = ""
@@ -678,7 +751,7 @@ async def location_tide_windows(
     units_toggle_text = "Switch to metric" if not metric else "Switch to imperial"
     units_display = "m" if metric else "ft"
 
-    return f"""
+    html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -762,6 +835,11 @@ async def location_tide_windows(
                 border-radius: 5px;
                 cursor: pointer;
                 font-size: 16px;
+            }}
+            .reset-link {{
+                margin-left: 15px;
+                color: #888;
+                font-size: 14px;
             }}
             .station-info {{
                 background: #e8f4f8;
@@ -890,6 +968,7 @@ async def location_tide_windows(
                 </div>
             </div>
             <button type="submit" class="search-btn">Search</button>
+            <a href="/location?reset=true" class="reset-link">Reset to defaults</a>
         </form>
 
         {error_html}
@@ -904,3 +983,11 @@ async def location_tide_windows(
     </body>
     </html>
     """
+
+    # Create response and save preferences
+    response = HTMLResponse(content=html_content)
+    if reset:
+        clear_preferences(response)
+    else:
+        save_preferences(response, new_prefs)
+    return response

@@ -65,6 +65,7 @@ pipeline/
 │       ├── geocoding.py     # Zip code to coordinates
 │       ├── location_windows.py  # Location-based window finding
 │       ├── noaa.py          # NOAA API client
+│       ├── preferences.py   # Cookie-based user preferences
 │       ├── stations.py      # NOAA station lookup
 │       ├── tides.py         # Tide processing for dashboard
 │       ├── twilight.py      # Dawn/dusk calculations
@@ -73,12 +74,14 @@ pipeline/
 │   └── known_stations.json  # Seed stations for overnight refresh
 ├── features/                # Gherkin feature specifications
 │   ├── location.feature     # Location-based tide windows
+│   ├── preferences.feature  # User preferences
 │   ├── tides.feature        # Tide dashboard
 │   └── windows.feature      # Window finder
 ├── tests/
 │   ├── conftest.py          # Shared pytest fixtures
 │   └── step_defs/           # pytest-bdd step definitions
 │       ├── test_location.py
+│       ├── test_preferences.py
 │       ├── test_tides.py
 │       └── test_windows.py
 ├── .github/
@@ -241,3 +244,4 @@ On every push:
 | Geocoding | Zippopotam.us | Free, no API key, simple |
 | Caching | In-memory + file | Simple, no database needed, persists station list |
 | Reference Stations Only | Filter type="R" | Subordinate stations don't return MLLW predictions |
+| User Preferences | Cookies | Server-side rendering, no flash of defaults, 1-year expiry |
