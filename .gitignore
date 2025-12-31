@@ -50,5 +50,3 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# App data (persisted cache)
-data/
