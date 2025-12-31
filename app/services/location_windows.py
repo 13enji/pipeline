@@ -230,6 +230,10 @@ async def find_tide_windows_for_station(
         station_id=station.id,
         tz=tz,
         days=days,
+        station_name=station.name,
+        station_state=station.state,
+        station_lat=station.latitude,
+        station_lon=station.longitude,
     )
 
     # Find all windows below threshold
