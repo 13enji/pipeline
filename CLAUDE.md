@@ -42,9 +42,11 @@ This is a FastAPI data dashboard that fetches data from external APIs. It uses *
 3. **Approve** — User reviews and approves the spec before any implementation
 4. **Implement** — Write step definitions in `tests/step_defs/`, then implement code
 5. **Test** — Run pytest to verify all scenarios pass
-6. **Deploy** — Push triggers GitHub Actions CI → Railway auto-deploys on success
+6. **Document** — Update README.md, architecture.md, and BACKLOG.md as needed
+7. **Deploy** — Run `git pull`, commit, push → GitHub Actions CI → Railway auto-deploys on success
 
 Never write implementation code before the Gherkin spec is approved.
+Always run `git pull` before committing to avoid conflicts with overnight sync jobs.
 
 ### Key Directories
 
