@@ -4,7 +4,7 @@ This document captures the architecture decisions for this project.
 
 ## Overview
 
-A data dashboard web application that fetches data from external APIs and displays it to users. Built with a specification-driven development workflow using BDD (Behavior-Driven Development).
+A tide window finder web application that fetches data from NOAA's Tides & Currents API and helps users find optimal low-tide windows for coastal activities. Built with a specification-driven development workflow using BDD (Behavior-Driven Development).
 
 ## Stack
 
@@ -18,7 +18,9 @@ A data dashboard web application that fetches data from external APIs and displa
 | Feature Tests (BDD) | pytest-bdd | Gherkin specs as executable tests |
 | CI/CD | GitHub Actions | Run tests on every push |
 | Hosting | Railway | Public deployment |
-| Database | Supabase (PostgreSQL) | When needed (deferred) |
+| Tide Data | NOAA Tides & Currents API | 6-minute interval tide predictions |
+| Geocoding | Zippopotam.us API | Zip code to coordinates |
+| Twilight | Astral library | Civil dawn/dusk calculations |
 
 ## Development Workflow
 
@@ -58,28 +60,102 @@ pipeline/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI application entry point
-│   ├── routers/             # API route handlers
-│   │   └── __init__.py
-│   ├── services/            # Business logic, external API calls
-│   │   └── __init__.py
-│   └── models/              # Pydantic models for request/response
-│       └── __init__.py
+│   └── services/            # Business logic, external API calls
+│       ├── cache.py         # Multi-station tide data caching
+│       ├── geocoding.py     # Zip code to coordinates
+│       ├── location_windows.py  # Location-based window finding
+│       ├── noaa.py          # NOAA API client
+│       ├── stations.py      # NOAA station lookup
+│       ├── tides.py         # Tide processing for dashboard
+│       ├── twilight.py      # Dawn/dusk calculations
+│       └── windows.py       # Window finding for La Jolla
+├── data/                    # Persisted cache data (gitignored)
+│   └── known_stations.json  # Stations to refresh overnight
 ├── features/                # Gherkin feature specifications
-│   └── *.feature
+│   ├── location.feature     # Location-based tide windows
+│   ├── tides.feature        # Tide dashboard
+│   └── windows.feature      # Window finder
 ├── tests/
-│   ├── __init__.py
 │   ├── conftest.py          # Shared pytest fixtures
-│   ├── unit/                # Unit tests
-│   │   └── __init__.py
 │   └── step_defs/           # pytest-bdd step definitions
-│       └── __init__.py
+│       ├── test_location.py
+│       ├── test_tides.py
+│       └── test_windows.py
 ├── .github/
 │   └── workflows/
 │       └── ci.yml           # GitHub Actions workflow
 ├── pyproject.toml           # Project config and dependencies
 ├── architecture.md          # This file
+├── BACKLOG.md               # Feature backlog
+├── CLAUDE.md                # Claude Code instructions
 └── README.md
 ```
+
+## External Integrations
+
+### NOAA Tides & Currents API
+
+Base URL: `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`
+
+Used for:
+- **6-minute interval predictions** - High-resolution tide height data
+- **Station metadata** - List of tide prediction stations
+
+Important notes:
+- Only **reference stations** (type="R") return predictions with MLLW datum
+- Subordinate stations (type="S") have no datum data and will fail
+- Maximum 31 days per request for 6-minute data (we batch requests)
+
+### Station Lookup
+
+Base URL: `https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json`
+
+- Fetches all tide prediction stations
+- Filters to reference stations only (type="R")
+- Uses Haversine formula to find nearest station to coordinates
+
+### Geocoding (Zippopotam.us)
+
+Base URL: `https://api.zippopotam.us/us/{zip_code}`
+
+- Free, no API key required
+- Returns latitude/longitude for US zip codes
+
+## Caching Architecture
+
+### Multi-Station Cache
+
+```
+┌─────────────────────────────────────────────────────┐
+│  In-Memory Cache (per station)                      │
+│  ─────────────────────────────────                  │
+│  Key: station_id                                    │
+│  Value: {readings, fetched_at, timezone}            │
+│  TTL: 20 hours                                      │
+└─────────────────────────────────────────────────────┘
+                  ↓
+┌─────────────────────────────────────────────────────┐
+│  Persistent Station List                            │
+│  ─────────────────────────────────                  │
+│  File: data/known_stations.json                     │
+│  Content: [{station_id, timezone_name}, ...]        │
+│  Purpose: Track stations for overnight refresh      │
+└─────────────────────────────────────────────────────┘
+```
+
+### Cache Flow
+
+1. **On Request**: Check if station is cached and valid (< 20 hours old)
+2. **Cache Miss**: Fetch from NOAA API, add to cache, persist station ID
+3. **Overnight Refresh**: `/refresh-tides` refreshes all known stations
+4. **Startup**: Warms cache with La Jolla data
+
+### Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/cache-stats` | GET | View cached stations and refresh times |
+| `/refresh-tides` | POST | Force refresh all known stations |
 
 ## Testing Strategy
 
@@ -119,21 +195,16 @@ On every push:
 5. Run all tests (pytest)
 6. Report results
 
+### Scheduled Jobs
+
+- **Daily cache refresh**: GitHub Actions workflow calls `/refresh-tides` endpoint
+
 ### Railway Deployment
 
 - Connected to GitHub repository
 - Auto-deploys `main` branch when CI passes
 - Environment variables configured in Railway dashboard
-
-## External Integrations
-
-### APIs (Planned)
-- Data source APIs (TBD based on dashboard requirements)
-- Potentially maps API for geographic data
-
-### Database (Deferred)
-- Supabase (PostgreSQL) when persistent storage is needed
-- Will be used for caching API responses and user preferences
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
 ## Key Decisions
 
@@ -142,12 +213,7 @@ On every push:
 | Framework | FastAPI | Modern, async (good for API calls), excellent docs, Python |
 | BDD Tool | pytest-bdd | Gherkin syntax, integrates with pytest ecosystem |
 | Hosting | Railway | Simple deployment, good DX, no infrastructure management |
-| No self-hosting | Managed services only | Solo developer, minimize ops burden |
-| Database deferred | Start without | Prove pipeline first, add when needed |
-
-## Future Considerations
-
-- **Authentication**: Supabase Auth when user accounts are needed
-- **Caching**: Redis or in-memory caching for API responses
-- **Maps**: Integration TBD (Mapbox, Leaflet, Google Maps)
-- **Monitoring**: Railway provides basic metrics; may add Sentry for error tracking
+| Tide Data | NOAA API | Free, authoritative source, 6-minute resolution |
+| Geocoding | Zippopotam.us | Free, no API key, simple |
+| Caching | In-memory + file | Simple, no database needed, persists station list |
+| Reference Stations Only | Filter type="R" | Subordinate stations don't return MLLW predictions |
