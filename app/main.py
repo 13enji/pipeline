@@ -1,14 +1,23 @@
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI, Form, Query
 from fastapi.responses import HTMLResponse
 
-from app.services.cache import refresh_cache
+from app.services.cache import get_tide_readings, refresh_cache
 from app.services.tides import ProcessedTide, TideCard, get_tide_cards
 from app.services.windows import TideWindow, find_tide_windows
 
-app = FastAPI(title="Pipeline", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Warm the cache on startup."""
+    await get_tide_readings()
+    yield
+
+
+app = FastAPI(title="Pipeline", version="0.1.0", lifespan=lifespan)
 
 
 @app.post("/refresh-tides")

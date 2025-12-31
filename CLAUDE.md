@@ -33,14 +33,18 @@ ruff check --fix .
 
 This is a FastAPI data dashboard that fetches data from external APIs. It uses **specification-driven development** with BDD (pytest-bdd).
 
-### Development Workflow
+### Development Workflow (MUST FOLLOW)
 
-1. User describes feature in plain English
-2. Claude Code writes Gherkin spec in `features/*.feature`
-3. User reviews/approves the spec
-4. Claude Code generates step definitions in `tests/step_defs/`
-5. Claude Code implements code to pass tests
-6. Push triggers GitHub Actions CI → Railway auto-deploys on success
+**IMPORTANT: Always follow this BDD process for new features. Do not skip steps.**
+
+1. **Interview** — Ask user clarifying questions about the feature
+2. **Specify** — Write Gherkin spec in `features/*.feature`
+3. **Approve** — User reviews and approves the spec before any implementation
+4. **Implement** — Write step definitions in `tests/step_defs/`, then implement code
+5. **Test** — Run pytest to verify all scenarios pass
+6. **Deploy** — Push triggers GitHub Actions CI → Railway auto-deploys on success
+
+Never write implementation code before the Gherkin spec is approved.
 
 ### Key Directories
 
