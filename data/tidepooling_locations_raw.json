@@ -510,40 +510,21 @@
       "best_tide_height_ft": null,
       "best_season": null,
       "tips": [
-        "Take Dana Point Harbor Drive past Doheny Beach to Ocean Institute parking",
+        "Take Dana Point Harbor Drive to Ocean Institute parking",
         "Rock scrambling required; strollers impractical",
         "Bring water, sunscreen, windbreakers",
         "High surf advisories may close the area",
         "Dogs prohibited on beach but allowed on leash to benches",
         "Stay back from unstable cliffs",
-        "Never remove animals, shells or rocks - observe only"
+        "Never remove animals, shells or rocks - observe only",
+        "Ocean Institute Visitor Center open Thu-Fri 11am-2pm, Sat-Sun 10am-4pm",
+        "Ocean Institute offers naturalist-led 2-hour tide pool hikes"
       ],
       "marine_life": ["hermit crabs", "crabs", "snails", "fish", "anemones", "mussels", "barnacles", "various algae"],
-      "amenities": ["benches along jetty", "Ocean Institute nearby", "interpretive materials"],
+      "amenities": ["benches along jetty", "Ocean Institute", "visitor center", "interpretive materials", "educational programs"],
       "access_difficulty": "moderate",
-      "sources": ["californiabeaches.com", "tidepooling.info", "california.com", "funorangecountyparks.com"],
-      "possible_duplicate_of": ["doheny-state-beach"]
-    },
-    {
-      "id": "doheny-state-beach",
-      "name": "Dana Point Tide Pools at Doheny State Beach",
-      "also_known_as": [],
-      "city": "Dana Point",
-      "county": "Orange",
-      "region": "Southern California",
-      "coordinates": null,
-      "description": "Ocean Institute offers naturalist-led 2-hour tide pool hikes.",
-      "best_tide_height_ft": null,
-      "best_season": null,
-      "tips": [
-        "Visitor Center open Thu-Fri 11am-2pm, Sat-Sun 10am-4pm",
-        "Five ocean environment tanks with local creatures"
-      ],
-      "marine_life": [],
-      "amenities": ["visitor center", "educational programs"],
-      "access_difficulty": "easy",
-      "sources": ["localanchor.com"],
-      "possible_duplicate_of": ["dana-point-tide-pools"]
+      "sources": ["californiabeaches.com", "tidepooling.info", "california.com", "funorangecountyparks.com", "localanchor.com"],
+      "possible_duplicate_of": []
     },
     {
       "id": "dana-strand-beach",
@@ -1180,21 +1161,17 @@
       "reason": "Both in Carlsbad, may refer to same general area"
     },
     {
-      "entries": ["dana-point-tide-pools", "doheny-state-beach"],
-      "reason": "Both Dana Point tidepools, may be same or adjacent"
-    },
-    {
       "entries": ["rockpile-beach", "heisler-park"],
       "reason": "Rockpile Beach is within Heisler Park"
     }
   ],
   "stats": {
-    "total_locations": 62,
+    "total_locations": 61,
     "with_coordinates": 48,
-    "without_coordinates": 14,
+    "without_coordinates": 13,
     "by_county": {
       "San Diego": 23,
-      "Orange": 24,
+      "Orange": 23,
       "Los Angeles": 15
     }
   }
