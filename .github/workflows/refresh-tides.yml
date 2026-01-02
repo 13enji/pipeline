@@ -30,27 +30,47 @@ jobs:
       - name: Sync station list from Railway
         run: |
           # Fetch current station list from Railway
-          STATS=$(curl -s "${{ secrets.APP_URL }}/cache-stats")
-
-          # Transform to known_stations.json format (extract only the fields we need)
-          echo "$STATS" | jq '[.stations[] | {
+          echo "Fetching stations from Railway..."
+          RAILWAY_STATIONS=$(curl -s "${{ secrets.APP_URL }}/cache-stats" | jq '[.stations[] | {
             station_id,
             timezone_name,
             name,
             state,
             latitude,
             longitude
-          }]' > data/known_stations.json.new
+          }]' 2>/dev/null || echo "[]")
 
-          # Check if file changed
-          if ! diff -q data/known_stations.json data/known_stations.json.new > /dev/null 2>&1; then
-            mv data/known_stations.json.new data/known_stations.json
-            echo "Station list updated"
-            echo "STATIONS_CHANGED=true" >> $GITHUB_ENV
-          else
-            rm data/known_stations.json.new
+          # If fetch failed or empty, skip sync
+          if [ "$RAILWAY_STATIONS" = "[]" ] || [ -z "$RAILWAY_STATIONS" ]; then
+            echo "No stations from Railway or fetch failed, skipping sync"
+            echo "STATIONS_CHANGED=false" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "Railway has $(echo "$RAILWAY_STATIONS" | jq 'length') stations"
+
+          # Load existing stations from git
+          GIT_STATIONS=$(cat data/known_stations.json)
+          echo "Git has $(echo "$GIT_STATIONS" | jq 'length') stations"
+
+          # Merge: union of both lists, deduplicated by station_id
+          # This ensures we never lose stations from either source
+          MERGED=$(jq -s '
+            (.[0] + .[1]) |
+            group_by(.station_id) |
+            map(.[0])
+          ' <(echo "$GIT_STATIONS") <(echo "$RAILWAY_STATIONS"))
+
+          echo "Merged total: $(echo "$MERGED" | jq 'length') stations"
+
+          # Check if merged is different from git
+          if [ "$(echo "$MERGED" | jq -S '.')" = "$(echo "$GIT_STATIONS" | jq -S '.')" ]; then
             echo "No changes to station list"
             echo "STATIONS_CHANGED=false" >> $GITHUB_ENV
+          else
+            echo "$MERGED" | jq '.' > data/known_stations.json
+            echo "Station list updated"
+            echo "STATIONS_CHANGED=true" >> $GITHUB_ENV
           fi
         env:
           APP_URL: ${{ secrets.APP_URL }}
