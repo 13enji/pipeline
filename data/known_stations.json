@@ -1,13 +1,5 @@
 [
   {
-    "station_id": "9410230",
-    "timezone_name": "America/Los_Angeles",
-    "name": "La Jolla (Scripps Institution Wharf)",
-    "state": "CA",
-    "latitude": 32.86688888888889,
-    "longitude": -117.2571388888889
-  },
-  {
     "station_id": "8517847",
     "timezone_name": "America/New_York",
     "name": "Brooklyn Bridge",
@@ -16,12 +8,12 @@
     "longitude": -73.995
   },
   {
-    "station_id": "9414290",
+    "station_id": "9410230",
     "timezone_name": "America/Los_Angeles",
-    "name": "SAN FRANCISCO (Golden Gate)",
+    "name": "La Jolla (Scripps Institution Wharf)",
     "state": "CA",
-    "latitude": 37.80630555555555,
-    "longitude": -122.4658888888889
+    "latitude": 32.86688888888889,
+    "longitude": -117.2571388888889
   },
   {
     "station_id": "9413651",
@@ -30,5 +22,13 @@
     "state": "CA",
     "latitude": 36.84130096435547,
     "longitude": -121.74530029296875
+  },
+  {
+    "station_id": "9414290",
+    "timezone_name": "America/Los_Angeles",
+    "name": "SAN FRANCISCO (Golden Gate)",
+    "state": "CA",
+    "latitude": 37.80630555555555,
+    "longitude": -122.4658888888889
   }
 ]
