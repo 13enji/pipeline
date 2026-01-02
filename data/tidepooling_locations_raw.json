@@ -679,38 +679,20 @@
     {
       "id": "rockpile-beach",
       "name": "Rockpile Beach",
-      "also_known_as": [],
+      "also_known_as": ["Heisler Park Tide Pools"],
       "city": "Laguna Beach",
       "county": "Orange",
       "region": "Southern California",
       "coordinates": {"lat": 33.543364, "lon": -117.790516},
-      "description": "Southern beach of Heisler Park with south-facing exposure.",
-      "best_tide_height_ft": null,
-      "best_season": null,
-      "tips": [],
-      "marine_life": [],
-      "amenities": [],
-      "access_difficulty": null,
-      "sources": ["californiabeaches.com"],
-      "possible_duplicate_of": ["heisler-park"]
-    },
-    {
-      "id": "heisler-park",
-      "name": "Heisler Park",
-      "also_known_as": [],
-      "city": "Laguna Beach",
-      "county": "Orange",
-      "region": "Southern California",
-      "coordinates": null,
-      "description": "Perched on the bluffs above the ocean, offers breathtaking panoramic views and easy access to some of the best tide pools in Southern California.",
+      "description": "Located at the base of the bluffs of Heisler Park with south-facing exposure. Breathtaking panoramic views and easy access to some of the best tide pools in Southern California.",
       "best_tide_height_ft": null,
       "best_season": null,
       "tips": [],
       "marine_life": [],
       "amenities": [],
       "access_difficulty": "easy",
-      "sources": ["funorangecountyparks.com"],
-      "possible_duplicate_of": ["rockpile-beach"]
+      "sources": ["californiabeaches.com", "funorangecountyparks.com"],
+      "possible_duplicate_of": []
     },
     {
       "id": "shaws-cove-beach",
@@ -1159,19 +1141,15 @@
     {
       "entries": ["carlsbad-tide-pools", "terramar-beach"],
       "reason": "Both in Carlsbad, may refer to same general area"
-    },
-    {
-      "entries": ["rockpile-beach", "heisler-park"],
-      "reason": "Rockpile Beach is within Heisler Park"
     }
   ],
   "stats": {
-    "total_locations": 61,
+    "total_locations": 60,
     "with_coordinates": 48,
-    "without_coordinates": 13,
+    "without_coordinates": 12,
     "by_county": {
       "San Diego": 23,
-      "Orange": 23,
+      "Orange": 22,
       "Los Angeles": 15
     }
   }
