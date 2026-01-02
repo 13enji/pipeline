@@ -1,18 +1,81 @@
 """Step definitions for user preferences feature tests."""
 
 import json
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from pytest_bdd import given, parsers, scenario, then, when
 
 from app.main import app
+from app.services.geocoding import GeoLocation
 from app.services.preferences import PREFERENCES_COOKIE_NAME, default_preferences
+from app.services.stations import Station, StationWithDistance
 
 
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+# Mock data for testing
+MOCK_LOCATION = GeoLocation(
+    zip_code="92037",
+    place_name="La Jolla",
+    state="CA",
+    latitude=32.8328,
+    longitude=-117.2713,
+)
+
+MOCK_STATION = Station(
+    id="9410230",
+    name="La Jolla, Scripps Pier",
+    state="CA",
+    latitude=32.8669,
+    longitude=-117.2571,
+    timezone_offset=-8,
+)
+
+MOCK_STATION_WITH_DISTANCE = StationWithDistance(
+    station=MOCK_STATION,
+    distance_miles=2.5,
+)
+
+
+@pytest.fixture
+def mock_geocode():
+    """Mock the geocoding service."""
+    with patch("app.main.geocode_zip", new_callable=AsyncMock) as mock:
+        mock.return_value = MOCK_LOCATION
+        yield mock
+
+
+@pytest.fixture
+def mock_station():
+    """Mock the station lookup service."""
+    with patch("app.main.find_nearest_station", new_callable=AsyncMock) as mock:
+        mock.return_value = MOCK_STATION_WITH_DISTANCE
+        yield mock
+
+
+@pytest.fixture
+def mock_windows():
+    """Mock the window finding service."""
+    with patch(
+        "app.main.find_tide_windows_for_station", new_callable=AsyncMock
+    ) as mock:
+        mock.return_value = []  # Empty list for simplicity
+        yield mock
+
+
+@pytest.fixture
+def mock_la_jolla_windows():
+    """Mock the La Jolla window finding service for /windows page."""
+    with patch(
+        "app.main.find_tide_windows", new_callable=AsyncMock
+    ) as mock:
+        mock.return_value = []
+        yield mock
 
 
 # --- Scenarios ---
@@ -115,17 +178,17 @@ def saved_units(client, preferences, units):
 
 
 @when("I visit the location page", target_fixture="response")
-def visit_location(client):
+def visit_location(client, mock_geocode, mock_station, mock_windows):
     return client.get("/location")
 
 
 @when("I visit the windows page", target_fixture="response")
-def visit_windows(client):
+def visit_windows(client, mock_la_jolla_windows):
     return client.get("/windows")
 
 
 @when("I visit the location page again", target_fixture="response")
-def visit_location_again(client):
+def visit_location_again(client, mock_geocode, mock_station, mock_windows):
     return client.get("/location")
 
 
@@ -160,7 +223,7 @@ def toggle_work_hours_off(preferences):
 
 
 @when("I submit the form", target_fixture="response")
-def submit_form(client, preferences):
+def submit_form(client, preferences, mock_geocode, mock_station, mock_windows, mock_la_jolla_windows):
     # Build query params from preferences
     params = {**default_preferences(), **preferences}
     # Determine which page based on whether zip_code is set
@@ -171,7 +234,7 @@ def submit_form(client, preferences):
 
 
 @when("I click reset to defaults", target_fixture="response")
-def click_reset(client):
+def click_reset(client, mock_geocode, mock_station, mock_windows):
     return client.get("/location?reset=true")
 
 
