@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import FastAPI, Form, Query, Request, Response
 from fastapi.responses import HTMLResponse
 
-from app.services.cache import get_cache_stats, get_tide_readings, refresh_cache
+from app.services.cache import get_cache_stats, refresh_cache
 from app.services.geocoding import GeocodingError, geocode_zip
 from app.services.location_windows import TideWindow as LocationTideWindow
 from app.services.location_windows import find_tide_windows_for_station
@@ -33,8 +33,8 @@ from app.services.windows import TideWindow, find_tide_windows
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Warm the cache on startup."""
-    await get_tide_readings()
+    """Warm the cache on startup for all known stations."""
+    await refresh_cache()
     yield
 
 
