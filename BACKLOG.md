@@ -17,19 +17,26 @@
 ### 4. Add reference stations
 - Allow users to select from known reference stations directly
 
-### 5. Map confirmation for location
+### 5. Use closest station (including subordinate) for low tide time
+- Currently only reference stations (type="R") are used for everything
+- Subordinate stations (type="S") can return high/low predictions but not 6-minute interval data
+- Change: Find closest station (reference OR subordinate) for the "lowest tide" time display
+- Keep using closest reference station for the 6-minute tide window calculations
+- This gives more accurate low tide times when a subordinate station is closer to the user
+
+### 6. Map confirmation for location
 - Show a map to confirm the location searched for
 - Helps users verify the correct station was found
 
-### 6. 24-hour time filter option
+### 7. 24-hour time filter option
 - Add option to show all 24 hours (no work hours filter)
 - Currently only filters for outside work hours
 
-### 7. Fix Celsius range formatting
+### 8. Fix Celsius range formatting
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
-### 8. Tidepooling locations directory (enhancements)
+### 9. Tidepooling locations directory (enhancements)
 - ~~Aggregate known tidepooling locations from web sources~~ (done)
 - ~~Create `/directory` page with Leaflet/OSM map~~ (done)
 - ~~Create `/location/{id}` detail pages~~ (done)
