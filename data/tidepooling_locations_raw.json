@@ -833,7 +833,7 @@
       "city": "Newport Beach",
       "county": "Orange",
       "region": "Southern California",
-      "coordinates": null,
+      "coordinates": {"lat": 33.5669486469445, "lon": -117.83021900300328},
       "description": "Crown jewel of tide pooling destinations. Four tidepools: Reef Point, Rocky Bight, Pelican Point, and Treasure Cove. Pristine park with untouched feel.",
       "best_tide_height_ft": null,
       "best_season": null,
@@ -845,7 +845,7 @@
       "marine_life": ["By-the-Wind Sailor", "Spanish Shawl"],
       "amenities": ["parking", "trolley"],
       "access_difficulty": "varies",
-      "sources": ["tidepooling.info", "funorangecountyparks.com", "localanchor.com"],
+      "sources": ["tidepooling.info", "funorangecountyparks.com", "localanchor.com", "crystalcovestatepark.org"],
       "possible_duplicate_of": []
     },
     {
