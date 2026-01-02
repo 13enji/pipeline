@@ -74,7 +74,8 @@ pipeline/
 │       ├── windows.py       # Window finding for La Jolla
 │       └── locations.py     # Tidepooling locations data service
 ├── data/                    # Persisted cache data (committed)
-│   ├── known_stations.json  # Seed stations for overnight refresh
+│   ├── known_reference_stations.json   # Reference stations for 6-minute data
+│   ├── known_subordinate_stations.json # Subordinate stations for low tide data
 │   └── tidepooling_locations_raw.json  # Tidepooling location directory data
 ├── features/                # Gherkin feature specifications
 │   ├── directory.feature    # Tidepooling locations directory
@@ -178,32 +179,37 @@ https://forecast.weather.gov/MapClick.php?w0=t&w3=sfcwind&w5=pop&AheadHour={hour
 
 ### Multi-Station Cache
 
+Two separate caches store tide data for different station types:
+
 ```
 ┌─────────────────────────────────────────────────────┐
-│  In-Memory Readings Cache (per station)             │
+│  Reference Station Cache (in-memory)                │
 │  ─────────────────────────────────                  │
 │  Key: station_id                                    │
-│  Value: {readings, fetched_at, timezone}            │
+│  Value: {readings, fetched_at, timezone, metadata}  │
 │  TTL: 20 hours                                      │
 │  Purpose: 6-minute interval data for window calc    │
+│  Stations: Reference stations only (type="R")       │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│  In-Memory Predictions Cache (per station)          │
+│  Subordinate Station Cache (in-memory)              │
 │  ─────────────────────────────────                  │
 │  Key: station_id                                    │
-│  Value: {predictions, fetched_at, timezone}         │
+│  Value: {predictions, fetched_at, timezone, meta}   │
 │  TTL: 20 hours                                      │
 │  Purpose: High/low predictions for low tide display │
-│  Note: Used for both reference & subordinate stns   │
+│  Stations: Any type (R or S) - uses closest station │
 └─────────────────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────────────────┐
-│  Persistent Station List                            │
+│  Persistent Station Lists                           │
 │  ─────────────────────────────────                  │
-│  File: data/known_stations.json (committed to repo) │
+│  Files:                                             │
+│    - data/known_reference_stations.json             │
+│    - data/known_subordinate_stations.json           │
 │  Content: [{station_id, name, state, lat, lon}, ...]│
-│  Seed: La Jolla station always included             │
+│  Seed: La Jolla (reference) always included         │
 │  Purpose: Track stations for overnight refresh      │
 └─────────────────────────────────────────────────────┘
 ```
@@ -211,11 +217,11 @@ https://forecast.weather.gov/MapClick.php?w0=t&w3=sfcwind&w5=pop&AheadHour={hour
 ### Cache Flow
 
 1. **On Request**: Check if station is cached and valid (< 20 hours old)
-2. **Cache Miss**: Fetch from NOAA API, add to cache, persist station ID to `known_stations.json`
-3. **Overnight Refresh**: GitHub Actions calls `/refresh-tides` to refresh all known stations
-4. **Overnight Sync**: GitHub Actions fetches station list from `/cache-stats` and commits to repo
-5. **Startup**: Warms cache with La Jolla data
-6. **On Deploy**: Uses committed `known_stations.json` which includes all synced stations
+2. **Cache Miss**: Fetch from NOAA API, add to appropriate cache, persist to corresponding JSON file
+3. **Overnight Refresh**: GitHub Actions calls `/refresh-tides` to refresh all known stations (both types)
+4. **Overnight Sync**: GitHub Actions fetches station lists from `/cache-stats` and commits to repo
+5. **Startup**: Warms cache for all known stations from both JSON files
+6. **On Deploy**: Uses committed station files which include all synced stations
 
 ### Station Persistence Decision
 

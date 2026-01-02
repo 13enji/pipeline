@@ -28,9 +28,12 @@ jobs:
       - name: Sync stations from Railway
         id: sync
         run: |
-          # Fetch current station list from Railway
-          echo "Fetching stations from Railway..."
-          RAILWAY_STATIONS=$(curl -s "${{ secrets.APP_URL }}/cache-stats" | jq '[.stations[] | {
+          # Fetch current cache stats from Railway
+          echo "Fetching cache stats from Railway..."
+          CACHE_STATS=$(curl -s "${{ secrets.APP_URL }}/cache-stats" 2>/dev/null || echo "{}")
+
+          # Extract reference stations
+          RAILWAY_REFERENCE=$(echo "$CACHE_STATS" | jq '[.reference_stations[]? | {
             station_id,
             timezone_name,
             name,
@@ -39,38 +42,61 @@ jobs:
             longitude
           }]' 2>/dev/null || echo "[]")
 
-          # If fetch failed or empty, skip sync
-          if [ "$RAILWAY_STATIONS" = "[]" ] || [ -z "$RAILWAY_STATIONS" ]; then
+          # Extract subordinate stations
+          RAILWAY_SUBORDINATE=$(echo "$CACHE_STATS" | jq '[.subordinate_stations[]? | {
+            station_id,
+            timezone_name,
+            name,
+            state,
+            latitude,
+            longitude
+          }]' 2>/dev/null || echo "[]")
+
+          # If both fetches failed or empty, skip sync
+          if [ "$RAILWAY_REFERENCE" = "[]" ] && [ "$RAILWAY_SUBORDINATE" = "[]" ]; then
             echo "No stations from Railway or fetch failed, skipping sync"
             echo "changed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "Railway has $(echo "$RAILWAY_STATIONS" | jq 'length') stations"
+          echo "Railway has $(echo "$RAILWAY_REFERENCE" | jq 'length') reference stations"
+          echo "Railway has $(echo "$RAILWAY_SUBORDINATE" | jq 'length') subordinate stations"
 
-          # Load existing stations from git
-          GIT_STATIONS=$(cat data/known_stations.json)
-          echo "Git has $(echo "$GIT_STATIONS" | jq 'length') stations"
+          CHANGED=false
 
-          # Merge: union of both lists, deduplicated by station_id
-          # This ensures we never lose stations from either source
-          MERGED=$(jq -s '
+          # Sync reference stations
+          GIT_REFERENCE=$(cat data/known_reference_stations.json)
+          echo "Git has $(echo "$GIT_REFERENCE" | jq 'length') reference stations"
+
+          MERGED_REFERENCE=$(jq -s '
             (.[0] + .[1]) |
             group_by(.station_id) |
             map(.[0])
-          ' <(echo "$GIT_STATIONS") <(echo "$RAILWAY_STATIONS"))
+          ' <(echo "$GIT_REFERENCE") <(echo "$RAILWAY_REFERENCE"))
 
-          echo "Merged total: $(echo "$MERGED" | jq 'length') stations"
-
-          # Check if merged is different from git
-          if [ "$(echo "$MERGED" | jq -S '.')" = "$(echo "$GIT_STATIONS" | jq -S '.')" ]; then
-            echo "No changes to station list"
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "$MERGED" | jq '.' > data/known_stations.json
-            echo "Station list updated"
-            echo "changed=true" >> $GITHUB_OUTPUT
+          if [ "$(echo "$MERGED_REFERENCE" | jq -S '.')" != "$(echo "$GIT_REFERENCE" | jq -S '.')" ]; then
+            echo "$MERGED_REFERENCE" | jq '.' > data/known_reference_stations.json
+            echo "Reference stations updated"
+            CHANGED=true
           fi
+
+          # Sync subordinate stations
+          GIT_SUBORDINATE=$(cat data/known_subordinate_stations.json)
+          echo "Git has $(echo "$GIT_SUBORDINATE" | jq 'length') subordinate stations"
+
+          MERGED_SUBORDINATE=$(jq -s '
+            (.[0] + .[1]) |
+            group_by(.station_id) |
+            map(.[0])
+          ' <(echo "$GIT_SUBORDINATE") <(echo "$RAILWAY_SUBORDINATE"))
+
+          if [ "$(echo "$MERGED_SUBORDINATE" | jq -S '.')" != "$(echo "$GIT_SUBORDINATE" | jq -S '.')" ]; then
+            echo "$MERGED_SUBORDINATE" | jq '.' > data/known_subordinate_stations.json
+            echo "Subordinate stations updated"
+            CHANGED=true
+          fi
+
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
         env:
           APP_URL: ${{ secrets.APP_URL }}
 
@@ -79,7 +105,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/known_stations.json
+          git add data/known_reference_stations.json data/known_subordinate_stations.json
           git commit -m "Sync stations from Railway (pre-deploy)
 
           Merged stations from Railway with git to prevent data loss.
