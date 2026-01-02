@@ -385,7 +385,18 @@ def get_cache_stats() -> dict[str, object]:
             info["cached"] = False
         stations_info.append(info)
 
+    # Add predictions cache info (includes subordinate stations)
+    predictions_info = []
+    for station_id, cache_entry in _predictions_cache.items():
+        predictions_info.append({
+            "station_id": station_id,
+            "predictions_count": len(cache_entry.predictions),
+            "fetched_at": cache_entry.fetched_at.isoformat(),
+        })
+
     return {
         "station_count": len(known),
         "stations": stations_info,
+        "predictions_cache_count": len(predictions_info),
+        "predictions_cache": predictions_info,
     }
