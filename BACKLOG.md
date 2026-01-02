@@ -87,7 +87,7 @@
 - Multi-station caching
   - Caches tide readings by station ID (20-hour TTL)
   - Persists station list for overnight refresh
-  - `/cache-stats` endpoint to view cached stations
+  - `/cache-stats` endpoint to view cached stations and predictions
 - Overnight station sync to git repo
   - GitHub Actions syncs discovered stations back to repo
   - Stations persist across Railway deploys

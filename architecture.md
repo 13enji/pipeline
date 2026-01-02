@@ -242,7 +242,7 @@ This ensures all discovered stations persist across deploys.
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/cache-stats` | GET | View cached stations with full metadata for sync |
+| `/cache-stats` | GET | View cached stations and predictions with full metadata |
 | `/refresh-tides` | POST | Force refresh all known stations |
 
 ## Testing Strategy

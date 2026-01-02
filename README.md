@@ -27,7 +27,7 @@ Tide window finder web application built with FastAPI. Helps find optimal low-ti
 | `GET /tides` | Tide dashboard with forecasts |
 | `GET /windows` | Tide window finder for La Jolla |
 | `GET /location` | Location-based tide windows (zip code) |
-| `GET /cache-stats` | View cached stations and refresh times |
+| `GET /cache-stats` | View cached stations, predictions cache, and refresh times |
 | `POST /refresh-tides` | Force refresh cache (called by scheduled job) |
 
 ## Setup
