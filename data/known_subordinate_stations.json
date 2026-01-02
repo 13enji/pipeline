@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "station_id": "TWC0419",
+    "timezone_name": "America/Los_Angeles",
+    "name": "San Clemente",
+    "state": "",
+    "latitude": 33.416666666667005,
+    "longitude": -117.61666666666996
+  }
+]
