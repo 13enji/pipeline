@@ -8,6 +8,14 @@
     "longitude": -73.995
   },
   {
+    "station_id": "8664022",
+    "timezone_name": "America/New_York",
+    "name": "General Dynamics Pier",
+    "state": "SC",
+    "latitude": 33.0083,
+    "longitude": -79.9233
+  },
+  {
     "station_id": "8721222",
     "timezone_name": "America/New_York",
     "name": "Packwood Place, Mosquito Lagoon",
