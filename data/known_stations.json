@@ -8,6 +8,14 @@
     "longitude": -73.995
   },
   {
+    "station_id": "8721222",
+    "timezone_name": "America/New_York",
+    "name": "Packwood Place, Mosquito Lagoon",
+    "state": "FL",
+    "latitude": 28.94,
+    "longitude": -80.87
+  },
+  {
     "station_id": "9410230",
     "timezone_name": "America/Los_Angeles",
     "name": "La Jolla (Scripps Institution Wharf)",
