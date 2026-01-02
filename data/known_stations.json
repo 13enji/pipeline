@@ -22,5 +22,13 @@
     "state": "CA",
     "latitude": 37.80630555555555,
     "longitude": -122.4658888888889
+  },
+  {
+    "station_id": "9413651",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Kirby Park, Elkhorn Slough",
+    "state": "CA",
+    "latitude": 36.84130096435547,
+    "longitude": -121.74530029296875
   }
 ]
