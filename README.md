@@ -10,6 +10,7 @@ Tide window finder web application built with FastAPI. Helps find optimal low-ti
 - **Tide Dashboard** (`/tides`) - 30/60/90 day tide forecasts for La Jolla
 - **Window Finder** (`/windows`) - Find continuous windows where tide stays below a threshold
 - **Location Search** (`/location`) - Enter any US zip code to find tide windows for the nearest NOAA station
+- **Subordinate Station Support** - Low tide times use the closest station (reference OR subordinate) for better accuracy
 - **Filters** - Work hours filter (outside M-F 9-5), daylight only, minimum duration
 - **Units** - Toggle between imperial (ft/miles) and metric (m/km)
 - **Light Times** - Shows first/last light times for each window
@@ -59,13 +60,14 @@ See [architecture.md](architecture.md) for detailed architecture documentation.
 
 ### Key Services
 
-- **NOAA API** - Fetches 6-minute interval tide predictions
+- **NOAA API** - Fetches 6-minute interval tide predictions and high/low predictions
 - **Geocoding** - Converts zip codes to coordinates via Zippopotam.us
-- **Station Lookup** - Finds nearest NOAA reference station
-- **Caching** - Multi-station cache with 20-hour TTL, persists station list for overnight refresh
+- **Station Lookup** - Finds nearest NOAA reference station (for windows) and nearest station of any type (for low tide)
+- **Caching** - Multi-station cache with 20-hour TTL for both 6-minute readings and high/low predictions
 
 ### Data Flow
 
 ```
-Zip Code → Geocode → Find Nearest Station → Fetch/Cache Readings → Find Windows → Display
+Zip Code → Geocode → Find Nearest Reference Station → Fetch/Cache 6-min Readings → Find Windows
+                   → Find Nearest Station (any type) → Fetch/Cache High/Low → Enhance Windows with Low Tide
 ```

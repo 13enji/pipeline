@@ -6,7 +6,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from app.services.noaa import LA_JOLLA_STATION_ID, TideReading, fetch_tide_readings
+from app.services.noaa import (
+    LA_JOLLA_STATION_ID,
+    TidePrediction,
+    TideReading,
+    fetch_tide_predictions,
+    fetch_tide_readings,
+)
 
 # Default timezone for La Jolla
 LA_JOLLA_TZ = ZoneInfo("America/Los_Angeles")
@@ -22,6 +28,15 @@ class StationCache:
     """Cache entry for a single station's readings."""
 
     readings: list[TideReading]
+    fetched_at: datetime
+    timezone: ZoneInfo
+
+
+@dataclass
+class PredictionCache:
+    """Cache entry for a single station's high/low predictions."""
+
+    predictions: list[TidePrediction]
     fetched_at: datetime
     timezone: ZoneInfo
 
@@ -67,6 +82,9 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 
 # In-memory cache for 6-minute tide readings, keyed by station ID
 _readings_cache: dict[str, StationCache] = {}
+
+# In-memory cache for high/low predictions, keyed by station ID
+_predictions_cache: dict[str, PredictionCache] = {}
 
 
 def _load_known_stations() -> list[KnownStation]:
@@ -217,6 +235,57 @@ async def get_tide_readings(force_refresh: bool = False) -> list[TideReading]:
         tz=LA_JOLLA_TZ,
         force_refresh=force_refresh,
     )
+
+
+def _is_prediction_cache_valid(station_id: str, tz: ZoneInfo) -> bool:
+    """Check if the prediction cache for a station is valid (exists and not expired)."""
+    if station_id not in _predictions_cache:
+        return False
+    cache_entry = _predictions_cache[station_id]
+    age = datetime.now(tz) - cache_entry.fetched_at
+    return age < timedelta(hours=CACHE_TTL_HOURS)
+
+
+async def get_tide_predictions_cached(
+    station_id: str,
+    tz: ZoneInfo,
+    days: int = 90,
+    force_refresh: bool = False,
+) -> list[TidePrediction]:
+    """
+    Get high/low tide predictions for a station, using cache if available.
+
+    This works for both reference and subordinate stations.
+    Subordinate stations only support high/low predictions (not 6-minute data).
+
+    Args:
+        station_id: NOAA station ID
+        tz: Timezone for the station
+        days: Number of days of predictions to fetch
+        force_refresh: If True, bypass cache and fetch fresh data
+
+    Returns:
+        List of TidePrediction objects (high/low only)
+    """
+    if not force_refresh and _is_prediction_cache_valid(station_id, tz):
+        return _predictions_cache[station_id].predictions
+
+    # Fetch fresh data
+    start_date = datetime.now(tz)
+    predictions = await fetch_tide_predictions(
+        station_id=station_id,
+        begin_date=start_date,
+        end_date=start_date + timedelta(days=days),
+    )
+
+    # Update cache
+    _predictions_cache[station_id] = PredictionCache(
+        predictions=predictions,
+        fetched_at=datetime.now(tz),
+        timezone=tz,
+    )
+
+    return predictions
 
 
 async def refresh_cache() -> dict[str, object]:

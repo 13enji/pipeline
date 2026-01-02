@@ -10,6 +10,7 @@ NOAA_STATIONS_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/sta
 
 # Cache for station list (fetched once per app lifetime)
 _stations_cache: list["Station"] | None = None
+_all_stations_cache: list["Station"] | None = None  # Includes subordinate stations
 
 
 @dataclass
@@ -22,6 +23,17 @@ class Station:
     latitude: float
     longitude: float
     timezone_offset: int  # Hours from UTC
+    station_type: str = "R"  # "R" for reference, "S" for subordinate
+
+    @property
+    def is_reference(self) -> bool:
+        """Check if this is a reference (harmonic) station."""
+        return self.station_type == "R"
+
+    @property
+    def is_subordinate(self) -> bool:
+        """Check if this is a subordinate station."""
+        return self.station_type == "S"
 
     @property
     def timezone(self) -> ZoneInfo:
@@ -78,11 +90,10 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 
 
 async def _fetch_stations() -> list[Station]:
-    """Fetch all tide prediction stations from NOAA.
+    """Fetch reference tide prediction stations from NOAA.
 
     Only returns reference stations (type="R") which have full datum data
-    and can return tide predictions. Subordinate stations (type="S") only
-    have tide prediction offsets and cannot return direct predictions.
+    and can return 6-minute interval tide predictions.
     """
     global _stations_cache
 
@@ -103,7 +114,6 @@ async def _fetch_stations() -> list[Station]:
             continue
 
         # Only include reference stations (type="R") which have full datum data
-        # Subordinate stations (type="S") don't return predictions with MLLW datum
         if s.get("type") != "R":
             continue
 
@@ -115,10 +125,57 @@ async def _fetch_stations() -> list[Station]:
                 latitude=float(s["lat"]),
                 longitude=float(s["lng"]),
                 timezone_offset=int(s.get("timezonecorr", -8)),
+                station_type="R",
             )
         )
 
     _stations_cache = stations
+    return stations
+
+
+async def _fetch_all_stations() -> list[Station]:
+    """Fetch all tide prediction stations from NOAA (reference AND subordinate).
+
+    Returns both reference stations (type="R") and subordinate stations (type="S").
+    Reference stations support 6-minute interval data.
+    Subordinate stations only support high/low predictions.
+    """
+    global _all_stations_cache
+
+    if _all_stations_cache is not None:
+        return _all_stations_cache
+
+    params = {"type": "tidepredictions"}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(NOAA_STATIONS_URL, params=params, timeout=30.0)
+        response.raise_for_status()
+        data = response.json()
+
+    stations = []
+    for s in data.get("stations", []):
+        # Skip stations without coordinates
+        if s.get("lat") is None or s.get("lng") is None:
+            continue
+
+        # Include both reference (R) and subordinate (S) stations
+        station_type = s.get("type", "R")
+        if station_type not in ("R", "S"):
+            continue
+
+        stations.append(
+            Station(
+                id=s["id"],
+                name=s["name"],
+                state=s.get("state", ""),
+                latitude=float(s["lat"]),
+                longitude=float(s["lng"]),
+                timezone_offset=int(s.get("timezonecorr", -8)),
+                station_type=station_type,
+            )
+        )
+
+    _all_stations_cache = stations
     return stations
 
 
@@ -143,14 +200,16 @@ class StationWithDistance:
 
 async def find_nearest_station(latitude: float, longitude: float) -> StationWithDistance:
     """
-    Find the nearest NOAA tide prediction station to given coordinates.
+    Find the nearest reference NOAA tide prediction station to given coordinates.
+
+    Only searches reference stations (type="R") which support 6-minute data.
 
     Args:
         latitude: Reference latitude
         longitude: Reference longitude
 
     Returns:
-        StationWithDistance with nearest station and distance
+        StationWithDistance with nearest reference station and distance
     """
     stations = await _fetch_stations()
 
@@ -170,7 +229,42 @@ async def find_nearest_station(latitude: float, longitude: float) -> StationWith
     return nearest
 
 
+async def find_nearest_station_any_type(
+    latitude: float, longitude: float
+) -> StationWithDistance:
+    """
+    Find the nearest NOAA tide prediction station (reference OR subordinate).
+
+    Searches all stations regardless of type. Use this when you only need
+    high/low predictions, not 6-minute interval data.
+
+    Args:
+        latitude: Reference latitude
+        longitude: Reference longitude
+
+    Returns:
+        StationWithDistance with nearest station (any type) and distance
+    """
+    stations = await _fetch_all_stations()
+
+    nearest: StationWithDistance | None = None
+
+    for station in stations:
+        distance = _haversine_distance(
+            latitude, longitude, station.latitude, station.longitude
+        )
+
+        if nearest is None or distance < nearest.distance_miles:
+            nearest = StationWithDistance(station=station, distance_miles=distance)
+
+    if nearest is None:
+        raise ValueError("No stations found")
+
+    return nearest
+
+
 def clear_station_cache() -> None:
     """Clear the cached station list (for testing)."""
-    global _stations_cache
+    global _stations_cache, _all_stations_cache
     _stations_cache = None
+    _all_stations_cache = None

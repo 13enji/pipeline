@@ -82,6 +82,7 @@ pipeline/
 │   ├── location.feature     # Location-based tide windows
 │   ├── noaa_links.feature   # NOAA source data links
 │   ├── preferences.feature  # User preferences
+│   ├── subordinate_stations.feature  # Subordinate station low tide support
 │   ├── tides.feature        # Tide dashboard
 │   ├── weather.feature      # Weather integration
 │   ├── weather_links.feature # Weather source links
@@ -96,6 +97,7 @@ pipeline/
 │       ├── test_location.py
 │       ├── test_noaa_links.py
 │       ├── test_preferences.py
+│       ├── test_subordinate_stations.py
 │       ├── test_tides.py
 │       ├── test_weather.py
 │       ├── test_weather_links.py
@@ -117,12 +119,18 @@ pipeline/
 Base URL: `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`
 
 Used for:
-- **6-minute interval predictions** - High-resolution tide height data
+- **6-minute interval predictions** - High-resolution tide height data (reference stations only)
+- **High/low predictions** - Discrete high and low tide times/heights (all stations)
 - **Station metadata** - List of tide prediction stations
 
-Important notes:
-- Only **reference stations** (type="R") return predictions with MLLW datum
-- Subordinate stations (type="S") have no datum data and will fail
+Station types:
+- **Reference stations** (type="R") - Support 6-minute interval data with MLLW datum
+- **Subordinate stations** (type="S") - Only support high/low predictions, not 6-minute data
+
+Usage in this app:
+- Window boundaries use 6-minute data from the nearest **reference** station
+- Low tide time/height uses high/low data from the nearest station of **any type**
+- This provides more accurate low tide times when a subordinate station is closer to the user
 - Maximum 31 days per request for 6-minute data (we batch requests)
 
 ### Station Lookup
@@ -130,8 +138,11 @@ Important notes:
 Base URL: `https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json`
 
 - Fetches all tide prediction stations
-- Filters to reference stations only (type="R")
+- Two lookup modes:
+  - `find_nearest_station()` - Reference stations only (type="R") for 6-minute window data
+  - `find_nearest_station_any_type()` - All stations (R or S) for high/low low tide data
 - Uses Haversine formula to find nearest station to coordinates
+- Station lists are cached separately (reference-only vs all stations)
 
 ### Geocoding (Zippopotam.us)
 
@@ -169,11 +180,22 @@ https://forecast.weather.gov/MapClick.php?w0=t&w3=sfcwind&w5=pop&AheadHour={hour
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  In-Memory Cache (per station)                      │
+│  In-Memory Readings Cache (per station)             │
 │  ─────────────────────────────────                  │
 │  Key: station_id                                    │
 │  Value: {readings, fetched_at, timezone}            │
 │  TTL: 20 hours                                      │
+│  Purpose: 6-minute interval data for window calc    │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  In-Memory Predictions Cache (per station)          │
+│  ─────────────────────────────────                  │
+│  Key: station_id                                    │
+│  Value: {predictions, fetched_at, timezone}         │
+│  TTL: 20 hours                                      │
+│  Purpose: High/low predictions for low tide display │
+│  Note: Used for both reference & subordinate stns   │
 └─────────────────────────────────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────────────────┐
@@ -291,7 +313,7 @@ On every push:
 | Tide Data | NOAA API | Free, authoritative source, 6-minute resolution |
 | Geocoding | Zippopotam.us | Free, no API key, simple |
 | Caching | In-memory + file | Simple, no database needed, persists station list |
-| Reference Stations Only | Filter type="R" | Subordinate stations don't return MLLW predictions |
+| Station Type Strategy | Reference for windows, any for low tide | 6-minute data requires reference stations; high/low works with subordinates |
 | User Preferences | Cookies | Server-side rendering, no flash of defaults, 1-year expiry |
 | Weather Data | NWS API | Free, no rate limits, hourly forecasts, 60-min cache |
 | Maps | Leaflet + OpenStreetMap | Free, no API key, swappable for Mapbox/Google later |

@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.services.cache import get_tide_readings_cached
-from app.services.noaa import TideReading
-from app.services.stations import Station
+from app.services.cache import get_tide_predictions_cached, get_tide_readings_cached
+from app.services.noaa import TidePrediction, TideReading
+from app.services.stations import Station, find_nearest_station_any_type
 from app.services.tides import is_outside_work_hours
 from app.services.twilight import get_daylight_window_for_location
 
@@ -109,6 +109,45 @@ def _find_min_reading(readings: list[TideReading]) -> TideReading:
     return readings[0]
 
 
+def _find_low_tide_in_window(
+    predictions: list[TidePrediction],
+    window_start: datetime,
+    window_end: datetime,
+) -> TidePrediction | None:
+    """Find the low tide prediction that falls within a window's time range.
+
+    Args:
+        predictions: List of high/low tide predictions
+        window_start: Start of the tide window
+        window_end: End of the tide window
+
+    Returns:
+        The low tide prediction within the window, or None if not found
+    """
+    # Make times comparable (strip timezone if needed for comparison)
+    for pred in predictions:
+        if pred.tide_type != "L":
+            continue
+
+        # Compare times - handle both naive and aware datetimes
+        pred_time = pred.time
+        start = window_start
+        end = window_end
+
+        # If prediction is naive but window times have timezone, add timezone
+        if pred_time.tzinfo is None and start.tzinfo is not None:
+            pred_time = pred_time.replace(tzinfo=start.tzinfo)
+
+        # If window times are naive but prediction has timezone, strip it
+        if pred_time.tzinfo is not None and start.tzinfo is None:
+            pred_time = pred_time.replace(tzinfo=None)
+
+        if start <= pred_time <= end:
+            return pred
+
+    return None
+
+
 def _find_windows_in_readings(
     readings: list[TideReading],
     max_height_ft: float,
@@ -207,17 +246,21 @@ async def find_tide_windows_for_station(
     daylight_only: bool = True,
     work_filter: bool = True,
     days: int = 90,
+    user_latitude: float | None = None,
+    user_longitude: float | None = None,
 ) -> list[TideWindow]:
     """
     Find tide windows for a specific station.
 
     Args:
-        station: The NOAA station to get tide data for
+        station: The NOAA reference station to get 6-minute tide data for
         max_height_ft: Maximum tide height for the window
         min_duration_minutes: Minimum window duration in minutes
         daylight_only: Only include windows during daylight hours
         work_filter: Only include windows outside work hours (M-F 9-5)
         days: Number of days to search
+        user_latitude: User's latitude for finding closest station for low tide
+        user_longitude: User's longitude for finding closest station for low tide
 
     Returns:
         List of TideWindow objects matching criteria, sorted by date
@@ -225,7 +268,7 @@ async def find_tide_windows_for_station(
     tz = station.timezone
     tz_abbr = station.timezone_abbr
 
-    # Get readings for this station (uses cache if available)
+    # Get 6-minute readings from reference station (for window calculations)
     readings = await get_tide_readings_cached(
         station_id=station.id,
         tz=tz,
@@ -238,6 +281,48 @@ async def find_tide_windows_for_station(
 
     # Find all windows below threshold
     windows = _find_windows_in_readings(readings, max_height_ft, tz, tz_abbr)
+
+    # Get low tide predictions from closest station (may be subordinate)
+    low_tide_predictions: list[TidePrediction] = []
+    if user_latitude is not None and user_longitude is not None:
+        try:
+            closest_station = await find_nearest_station_any_type(
+                user_latitude, user_longitude
+            )
+            low_tide_predictions = await get_tide_predictions_cached(
+                station_id=closest_station.station.id,
+                tz=closest_station.station.timezone,
+                days=days,
+            )
+        except (ValueError, Exception):
+            # Fall back to reference station predictions if lookup fails
+            pass
+
+    # If no subordinate predictions, use reference station predictions
+    if not low_tide_predictions:
+        try:
+            low_tide_predictions = await get_tide_predictions_cached(
+                station_id=station.id,
+                tz=tz,
+                days=days,
+            )
+        except Exception:
+            pass  # Will use 6-minute data fallback
+
+    # Enhance windows with low tide data from closest station
+    for window in windows:
+        low_tide = _find_low_tide_in_window(
+            low_tide_predictions, window.start_time, window.end_time
+        )
+        if low_tide is not None:
+            # Use the closest station's low tide time and height
+            low_time = low_tide.time
+            if low_time.tzinfo is None:
+                low_time = low_time.replace(tzinfo=tz)
+            window.min_height_ft = low_tide.height_ft
+            window.min_height_time = low_time
+        # If no low tide found in predictions, keep the 6-minute data fallback
+        # (already set by _find_windows_in_readings)
 
     # Filter by daylight overlap
     if daylight_only:

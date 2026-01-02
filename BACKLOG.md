@@ -17,30 +17,28 @@
 ### 4. Add reference stations
 - Allow users to select from known reference stations directly
 
-### 5. Use closest station (including subordinate) for low tide time
-- Currently only reference stations (type="R") are used for everything
-- Subordinate stations (type="S") can return high/low predictions but not 6-minute interval data
-- Change: Find closest station (reference OR subordinate) for the "lowest tide" time display
-- Keep using closest reference station for the 6-minute tide window calculations
-- This gives more accurate low tide times when a subordinate station is closer to the user
-
-### 6. Map confirmation for location
+### 5. Map confirmation for location
 - Show a map to confirm the location searched for
 - Helps users verify the correct station was found
 
-### 7. 24-hour time filter option
+### 6. 24-hour time filter option
 - Add option to show all 24 hours (no work hours filter)
 - Currently only filters for outside work hours
 
-### 8. Fix Celsius range formatting
+### 7. Fix Celsius range formatting
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
-### 9. Add schema validation tests for tidepooling locations JSON
+### 8. Add schema validation tests for tidepooling locations JSON
 - Validate all required fields are present on each location
 - Check stats match actual counts (total_locations, by_county, with/without coordinates)
 - Ensure no duplicate IDs
 - Validate coordinates are valid lat/lon when present
+
+### 9. Filter for active/current NOAA stations only
+- Some NOAA stations are defunct but still appear in the API (e.g., Oceanside Harbor 9410396)
+- Add logic to only include stations that are currently operational
+- Should apply to both reference and subordinate station lookups
 
 ### 10. Tidepooling locations directory (enhancements)
 - ~~Aggregate known tidepooling locations from web sources~~ (done)
@@ -88,7 +86,7 @@
   - Enter US zip code to find nearest NOAA station
   - Shows station name and distance
   - Handles time zones relative to station location
-  - Filters for reference stations only (type="R") for reliable predictions
+  - Uses reference stations for window calculations (6-minute data)
 - Multi-station caching
   - Caches tide readings by station ID (20-hour TTL)
   - Persists station list for overnight refresh
@@ -112,3 +110,9 @@
   - Shows temp, wind, and precipitation for location
   - AheadHour param positions 48-hour window near tide window time
   - Links open in new tab, underline on hover
+- Subordinate station support for low tide times
+  - Uses closest station (reference OR subordinate) for low tide time/height
+  - Window boundaries still calculated from closest reference station (6-minute data)
+  - More accurate low tide times when subordinate station is closer to user
+  - High/low predictions cached with same TTL as 6-minute data
+  - Falls back to reference station data if no subordinate low found in window

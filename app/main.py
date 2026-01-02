@@ -922,6 +922,7 @@ async def location_tide_windows(
             station = station_result.station
 
             # Get tide windows for this station
+            # Pass user coordinates to find closest station for low tide data
             windows = await find_tide_windows_for_station(
                 station=station,
                 max_height_ft=max_height,
@@ -929,6 +930,8 @@ async def location_tide_windows(
                 daylight_only=True,
                 work_filter=work_filter_on,
                 days=days,
+                user_latitude=location.latitude,
+                user_longitude=location.longitude,
             )
 
             # Fetch weather for station location (where user will be tidepooling)
