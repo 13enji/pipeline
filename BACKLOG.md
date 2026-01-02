@@ -36,7 +36,13 @@
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
-### 9. Tidepooling locations directory (enhancements)
+### 9. Add schema validation tests for tidepooling locations JSON
+- Validate all required fields are present on each location
+- Check stats match actual counts (total_locations, by_county, with/without coordinates)
+- Ensure no duplicate IDs
+- Validate coordinates are valid lat/lon when present
+
+### 10. Tidepooling locations directory (enhancements)
 - ~~Aggregate known tidepooling locations from web sources~~ (done)
 - ~~Create `/directory` page with Leaflet/OSM map~~ (done)
 - ~~Create `/location/{id}` detail pages~~ (done)
