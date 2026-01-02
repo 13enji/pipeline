@@ -18,46 +18,25 @@
     {
       "id": "point-loma-tide-pools",
       "name": "Point Loma Tide Pools",
-      "also_known_as": [],
+      "also_known_as": ["Cabrillo National Monument", "Point Loma Tide Pools at Cabrillo"],
       "city": "San Diego",
       "county": "San Diego",
       "region": "Southern California",
       "coordinates": {"lat": 32.669107, "lon": -117.245193},
-      "description": "One of the best protected rocky intertidal areas in California. Over 350,000 visitors annually.",
+      "description": "One of the best protected rocky intertidal areas in California. Over 350,000 visitors annually. Protected park area with limited beach access.",
       "best_tide_height_ft": 0.7,
       "best_season": "Fall and winter",
       "tips": [
         "Accessible approximately two hours before and after low tide",
         "Groups of 10+ need permits for tides of 0.7 feet or lower",
-        "Park closes at 4:30 PM"
-      ],
-      "marine_life": ["sea anemones", "keyhole limpets", "black tegula snails", "Kellet's whelks", "sandcastle worms"],
-      "amenities": ["parking", "visitor center"],
-      "access_difficulty": "easy",
-      "sources": ["californiabeaches.com", "outdoorsocal.com", "california.com"],
-      "possible_duplicate_of": ["cabrillo-national-monument"]
-    },
-    {
-      "id": "cabrillo-national-monument",
-      "name": "Cabrillo National Monument",
-      "also_known_as": ["Point Loma Tide Pools at Cabrillo"],
-      "city": "San Diego",
-      "county": "San Diego",
-      "region": "Southern California",
-      "coordinates": {"lat": 32.669212, "lon": -117.245114},
-      "description": "Protected park area with limited beach access. One of San Diego's premier tide pool destinations.",
-      "best_tide_height_ft": 0.7,
-      "best_season": "Fall and winter",
-      "tips": [
+        "Park closes at 4:30 PM",
         "Designated parking area near tide pools",
-        "Kiosk provides guidance",
-        "Best times when tide is 0.7 feet or lower"
+        "Kiosk provides guidance"
       ],
-      "marine_life": ["algae", "sponge weed", "kelps", "red algae"],
+      "marine_life": ["sea anemones", "keyhole limpets", "black tegula snails", "Kellet's whelks", "sandcastle worms", "algae", "sponge weed", "kelps", "red algae"],
       "amenities": ["parking", "visitor center", "restrooms"],
       "access_difficulty": "easy",
-      "sources": ["californiabeaches.com", "tidepooling.info"],
-      "possible_duplicate_of": ["point-loma-tide-pools"]
+      "sources": ["californiabeaches.com", "outdoorsocal.com", "california.com", "tidepooling.info"]
     },
     {
       "id": "sunset-cliffs-beach",
@@ -150,26 +129,7 @@
       "marine_life": ["sea stars", "anemones", "crabs", "sea urchins"],
       "amenities": ["parking"],
       "access_difficulty": "moderate",
-      "sources": ["outdoorsocal.com", "californiabeaches.com"],
-      "possible_duplicate_of": ["hospital-beach"]
-    },
-    {
-      "id": "hospital-beach",
-      "name": "Hospital Beach",
-      "also_known_as": ["Hospital Point"],
-      "city": "La Jolla",
-      "county": "San Diego",
-      "region": "Southern California",
-      "coordinates": {"lat": 32.842741, "lon": -117.281223},
-      "description": "Rugged waterfront area along Coast Boulevard.",
-      "best_tide_height_ft": null,
-      "best_season": null,
-      "tips": [],
-      "marine_life": [],
-      "amenities": [],
-      "access_difficulty": "moderate",
-      "sources": ["californiabeaches.com"],
-      "possible_duplicate_of": ["la-jolla-cove-hospitals-reef"]
+      "sources": ["outdoorsocal.com", "californiabeaches.com"]
     },
     {
       "id": "whispering-sands-beach",
@@ -436,45 +396,25 @@
     {
       "id": "terramar-beach",
       "name": "Terramar Beach",
-      "also_known_as": [],
+      "also_known_as": ["Carlsbad Tide Pools"],
       "city": "Carlsbad",
       "county": "San Diego",
       "region": "Southern California",
-      "coordinates": {"lat": 33.128703, "lon": -117.333924},
-      "description": "Narrow beach in front of Terramar community. Excellent tidepooling experience.",
+      "coordinates": {"lat": 33.12944275292157, "lon": -117.33481425990438},
+      "description": "Narrow beach in front of Terramar community. Excellent tidepooling experience. Features chameleon moss that literally changes colors.",
       "best_tide_height_ft": null,
       "best_season": null,
       "tips": [
         "Small lot near beach entrance",
         "Street parking nearby",
         "Can fill quickly on weekends",
-        "Short staircase descent to beach"
-      ],
-      "marine_life": ["colorful sea anemones", "starfish", "crabs", "barnacles"],
-      "amenities": ["parking"],
-      "access_difficulty": "easy",
-      "sources": ["californiabeaches.com", "outdoorsocal.com"],
-      "possible_duplicate_of": []
-    },
-    {
-      "id": "carlsbad-tide-pools",
-      "name": "Carlsbad Tide Pools",
-      "also_known_as": [],
-      "city": "Carlsbad",
-      "county": "San Diego",
-      "region": "Southern California",
-      "coordinates": null,
-      "description": "Located between Power Plant and South Carlsbad. Features chameleon moss that literally changes colors.",
-      "best_tide_height_ft": null,
-      "best_season": null,
-      "tips": [
+        "Short staircase descent to beach",
         "Best viewing during low tide"
       ],
-      "marine_life": ["sea stars", "urchins", "barnacles", "mussels", "snails", "crabs", "Pacific octopi", "chameleon moss"],
-      "amenities": [],
-      "access_difficulty": null,
-      "sources": ["california.com"],
-      "possible_duplicate_of": ["terramar-beach"]
+      "marine_life": ["colorful sea anemones", "starfish", "crabs", "barnacles", "sea stars", "urchins", "mussels", "snails", "Pacific octopi", "chameleon moss"],
+      "amenities": ["parking"],
+      "access_difficulty": "easy",
+      "sources": ["californiabeaches.com", "outdoorsocal.com", "california.com"]
     },
     {
       "id": "coronado-beach",
@@ -1129,26 +1069,13 @@
       "possible_duplicate_of": []
     }
   ],
-  "potential_duplicates": [
-    {
-      "entries": ["point-loma-tide-pools", "cabrillo-national-monument"],
-      "reason": "Same coordinates, same location - likely the same place with different names"
-    },
-    {
-      "entries": ["hospital-beach", "la-jolla-cove-hospitals-reef"],
-      "reason": "Same coordinates, Hospital Beach is part of the larger area"
-    },
-    {
-      "entries": ["carlsbad-tide-pools", "terramar-beach"],
-      "reason": "Both in Carlsbad, may refer to same general area"
-    }
-  ],
+  "potential_duplicates": [],
   "stats": {
-    "total_locations": 60,
-    "with_coordinates": 48,
-    "without_coordinates": 12,
+    "total_locations": 57,
+    "with_coordinates": 46,
+    "without_coordinates": 11,
     "by_county": {
-      "San Diego": 23,
+      "San Diego": 20,
       "Orange": 22,
       "Los Angeles": 15
     }

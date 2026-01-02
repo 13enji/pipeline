@@ -41,12 +41,15 @@
 - ~~Aggregate known tidepooling locations from web sources~~ (done)
 - ~~Create `/directory` page with Leaflet/OSM map~~ (done)
 - ~~Create `/location/{id}` detail pages~~ (done)
-- Pending: Review and resolve 5 potential duplicate pairs manually
-- Pending: Add coordinates to 14 locations missing them
+- ~~Review and resolve 3 potential duplicate pairs manually~~ (done - merged into 57 locations)
+- Pending: Add coordinates to 11 locations missing them
 - Future: Search bar to focus map
 - Future: Driving directions deep link (native maps app)
 - Future: Expand beyond SoCal (Central CA, Northern CA, other states)
 - Future: User-contributed locations (requires database)
+
+### 10. User Analystics
+- Something to see where our users are and how many users we have and what they use
 
 ---
 
@@ -55,7 +58,7 @@
 - Tidepooling locations directory
   - `/directory` page with Leaflet/OpenStreetMap interactive map
   - `/location/{id}` detail pages for each location
-  - 62 Southern California locations (48 with coordinates)
+  - 57 Southern California locations (46 with coordinates)
   - Mobile-first responsive design
   - Data aggregated from 8+ sources
 - NOAA source data links
