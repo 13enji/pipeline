@@ -39,6 +39,11 @@ class PredictionCache:
     predictions: list[TidePrediction]
     fetched_at: datetime
     timezone: ZoneInfo
+    station_name: str = ""
+    station_state: str = ""
+    station_lat: float = 0.0
+    station_lon: float = 0.0
+    station_type: str = ""  # "R" for reference, "S" for subordinate
 
 
 @dataclass
@@ -251,6 +256,11 @@ async def get_tide_predictions_cached(
     tz: ZoneInfo,
     days: int = 90,
     force_refresh: bool = False,
+    station_name: str = "",
+    station_state: str = "",
+    station_lat: float = 0.0,
+    station_lon: float = 0.0,
+    station_type: str = "",
 ) -> list[TidePrediction]:
     """
     Get high/low tide predictions for a station, using cache if available.
@@ -263,6 +273,11 @@ async def get_tide_predictions_cached(
         tz: Timezone for the station
         days: Number of days of predictions to fetch
         force_refresh: If True, bypass cache and fetch fresh data
+        station_name: Station name for display
+        station_state: Station state abbreviation
+        station_lat: Station latitude
+        station_lon: Station longitude
+        station_type: Station type ("R" for reference, "S" for subordinate)
 
     Returns:
         List of TidePrediction objects (high/low only)
@@ -283,6 +298,11 @@ async def get_tide_predictions_cached(
         predictions=predictions,
         fetched_at=datetime.now(tz),
         timezone=tz,
+        station_name=station_name,
+        station_state=station_state,
+        station_lat=station_lat,
+        station_lon=station_lon,
+        station_type=station_type,
     )
 
     return predictions
@@ -388,11 +408,23 @@ def get_cache_stats() -> dict[str, object]:
     # Add predictions cache info (includes subordinate stations)
     predictions_info = []
     for station_id, cache_entry in _predictions_cache.items():
-        predictions_info.append({
+        info: dict[str, object] = {
             "station_id": station_id,
+            "name": cache_entry.station_name or "(unknown)",
+            "state": cache_entry.station_state or "",
+            "station_type": cache_entry.station_type or "",
+            "latitude": cache_entry.station_lat,
+            "longitude": cache_entry.station_lon,
             "predictions_count": len(cache_entry.predictions),
             "fetched_at": cache_entry.fetched_at.isoformat(),
-        })
+        }
+        if cache_entry.station_lat and cache_entry.station_lon:
+            distance = _haversine_distance(
+                LA_JOLLA_LAT, LA_JOLLA_LON,
+                cache_entry.station_lat, cache_entry.station_lon
+            )
+            info["distance_from_la_jolla_miles"] = round(distance, 1)
+        predictions_info.append(info)
 
     return {
         "station_count": len(known),

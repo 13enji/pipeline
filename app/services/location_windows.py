@@ -293,6 +293,11 @@ async def find_tide_windows_for_station(
                 station_id=closest_station.station.id,
                 tz=closest_station.station.timezone,
                 days=days,
+                station_name=closest_station.station.name,
+                station_state=closest_station.station.state,
+                station_lat=closest_station.station.latitude,
+                station_lon=closest_station.station.longitude,
+                station_type=closest_station.station.station_type,
             )
         except (ValueError, Exception):
             # Fall back to reference station predictions if lookup fails
@@ -305,6 +310,11 @@ async def find_tide_windows_for_station(
                 station_id=station.id,
                 tz=tz,
                 days=days,
+                station_name=station.name,
+                station_state=station.state,
+                station_lat=station.latitude,
+                station_lon=station.longitude,
+                station_type=station.station_type,
             )
         except Exception:
             pass  # Will use 6-minute data fallback

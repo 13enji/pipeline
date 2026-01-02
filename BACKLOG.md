@@ -14,33 +14,30 @@
 ### 3. Calendar view for windows
 - Calendar-style view showing tide windows across days/weeks
 
-### 4. Add reference stations
-- Allow users to select from known reference stations directly
-
-### 5. Map confirmation for location
+### 4. Map confirmation for location
 - Show a map to confirm the location searched for
 - Helps users verify the correct station was found
 
-### 6. 24-hour time filter option
+### 5. 24-hour time filter option
 - Add option to show all 24 hours (no work hours filter)
 - Currently only filters for outside work hours
 
-### 7. Fix Celsius range formatting
+### 6. Fix Celsius range formatting
 - Current display of "-1-0C" is hard to read
 - Improve formatting for negative to positive temperature ranges (e.g., "-1 to 0°C")
 
-### 8. Add schema validation tests for tidepooling locations JSON
+### 7. Add schema validation tests for tidepooling locations JSON
 - Validate all required fields are present on each location
 - Check stats match actual counts (total_locations, by_county, with/without coordinates)
 - Ensure no duplicate IDs
 - Validate coordinates are valid lat/lon when present
 
-### 9. Filter for active/current NOAA stations only
+### 8. Filter for active/current NOAA stations only
 - Some NOAA stations are defunct but still appear in the API (e.g., Oceanside Harbor 9410396)
 - Add logic to only include stations that are currently operational
 - Should apply to both reference and subordinate station lookups
 
-### 10. Tidepooling locations directory (enhancements)
+### 9. Tidepooling locations directory (enhancements)
 - ~~Aggregate known tidepooling locations from web sources~~ (done)
 - ~~Create `/directory` page with Leaflet/OSM map~~ (done)
 - ~~Create `/location/{id}` detail pages~~ (done)
