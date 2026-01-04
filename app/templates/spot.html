@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}{{ location.name }} - Tidepooling.org{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Location header -->
+<div class="page-header">
+    <h1>{{ location.name }}</h1>
+    <p class="subtitle">{{ location.city }}, {{ location.county }} County</p>
+    {% if location.also_known_as %}
+    <p class="aka">Also known as: {{ location.also_known_as | join(', ') }}</p>
+    {% endif %}
+</div>
+
+<!-- Map -->
+{% if location.has_coordinates %}
+<div id="location-map"></div>
+{% else %}
+<div class="no-map">Coordinates not available for this location</div>
+{% endif %}
+
+<!-- Status warning if any -->
+{% if location.status %}
+<div class="status-warning">{{ location.status }}</div>
+{% endif %}
+
+<!-- Description -->
+<p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;">{{ location.description }}</p>
+
+<!-- Quick info grid -->
+<div class="info-grid">
+    {% if location.best_tide_height_ft is not none %}
+    <div class="info-item">
+        <span class="info-label">Best Tide Height</span>
+        <span class="info-value">{{ location.best_tide_height_ft }} ft or lower</span>
+    </div>
+    {% endif %}
+    {% if location.best_season %}
+    <div class="info-item">
+        <span class="info-label">Best Season</span>
+        <span class="info-value">{{ location.best_season }}</span>
+    </div>
+    {% endif %}
+    {% if location.access_difficulty %}
+    <div class="info-item">
+        <span class="info-label">Access Difficulty</span>
+        <span class="info-value difficulty-{{ location.access_difficulty }}">{{ location.access_difficulty | title }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Tide Windows Section -->
+<article>
+    <h2>Upcoming Tide Windows</h2>
+
+    {% if station %}
+    <div class="station-info">
+        <h3>{{ station.name }}</h3>
+        <p>{{ station_distance }} away</p>
+    </div>
+    {% endif %}
+
+    <!-- Filter form -->
+    <form method="get" action="/spot/{{ location.id }}" class="search-box">
+        <div class="filter-row">
+            <div class="form-group">
+                <label for="max_height">Tides below ({{ height_unit }})</label>
+                <input type="number" id="max_height" name="max_height" value="{{ display_height }}" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="min_duration">Min duration (min)</label>
+                <input type="number" id="min_duration" name="min_duration" value="{{ min_duration }}" step="1" min="0">
+            </div>
+            <div class="form-group">
+                <label for="days">Days ahead</label>
+                <select id="days" name="days">
+                    <option value="30"{% if days == 30 %} selected{% endif %}>30</option>
+                    <option value="60"{% if days == 60 %} selected{% endif %}>60</option>
+                    <option value="90"{% if days == 90 %} selected{% endif %}>90</option>
+                </select>
+            </div>
+        </div>
+        <input type="hidden" name="units" value="{{ units }}">
+        <input type="hidden" name="work_filter" value="{{ work_filter }}">
+        <div class="toggle-row">
+            <div class="toggle-item">
+                <span class="toggle-label">Units: {{ 'm' if metric else 'ft' }}</span>
+                <a href="{{ units_toggle_url }}" class="toggle-link">{{ units_toggle_text }}</a>
+            </div>
+            <div class="toggle-item">
+                <span class="toggle-label">{{ work_filter_status }}</span>
+                <a href="{{ work_toggle_url }}" class="toggle-link">{{ work_toggle_text }}</a>
+            </div>
+        </div>
+        <button type="submit">Update</button>
+        <a href="/spot/{{ location.id }}?reset=true" style="margin-left: 1rem; font-size: 0.9rem;">Reset</a>
+    </form>
+
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    {% if windows %}
+    <p class="result-count">{{ windows | length }} window{{ 's' if windows | length != 1 else '' }} found</p>
+    <div class="window-list">
+        {% for w in windows %}
+        <div class="window-entry">
+            <div class="window-date">{{ w.formatted_date }}</div>
+            <div class="window-time">{{ w.formatted_time_range }}</div>
+            <div class="window-details">
+                <span class="window-duration">{{ w.duration_display }}</span>
+                <span class="window-height">Low: {{ w.min_height_display(metric) }}</span>
+                <span class="window-light">{{ w.relevant_light_display }}</span>
+                {% if w.weather %}
+                <span class="window-weather">
+                    <a href="{{ w.weather_url }}" target="_blank">{{ w.weather.temp_display(metric) }} {{ w.weather.precip_display() }}</a>
+                </span>
+                {% endif %}
+            </div>
+            <div class="window-noaa">
+                <a href="{{ w.noaa_url }}" target="_blank">View on NOAA</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif not error %}
+    <p class="no-results">No tide windows match your criteria. Try adjusting the filters.</p>
+    {% endif %}
+</article>
+
+<!-- Tips, Marine Life, Amenities -->
+{% if location.tips %}
+<div class="info-section">
+    <h3>Tips</h3>
+    <ul>
+        {% for tip in location.tips %}
+        <li>{{ tip }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if location.marine_life %}
+<div class="info-section">
+    <h3>Marine Life</h3>
+    <ul>
+        {% for item in location.marine_life %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if location.amenities %}
+<div class="info-section">
+    <h3>Amenities</h3>
+    <ul>
+        {% for item in location.amenities %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p class="sources">Sources: {{ location.sources | join(', ') }}</p>
+
+<p style="margin-top: 2rem;"><a href="/">&larr; Back to all locations</a></p>
+{% endblock %}
+
+{% block scripts %}
+{% if location.has_coordinates %}
+<script>
+    var map = L.map('location-map').setView([{{ location.coordinates.lat }}, {{ location.coordinates.lon }}], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    L.marker([{{ location.coordinates.lat }}, {{ location.coordinates.lon }}]).addTo(map);
+
+    // Save to recent locations
+    (function() {
+        try {
+            var recent = JSON.parse(localStorage.getItem('recentLocations') || '[]');
+            recent = recent.filter(function(loc) { return loc.id !== '{{ location.id }}'; });
+            recent.unshift({ id: '{{ location.id }}', name: '{{ location.name | replace("'", "\\'") }}' });
+            recent = recent.slice(0, 5);
+            localStorage.setItem('recentLocations', JSON.stringify(recent));
+        } catch (e) {}
+    })();
+</script>
+{% endif %}
+{% endblock %}

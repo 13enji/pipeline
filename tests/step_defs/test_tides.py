@@ -514,7 +514,8 @@ def check_work_filter_default_on(response):
     assert response.status_code == 200
     # Check that the toggle shows "Show All Daylight" which means filter is currently ON
     assert "Show All Daylight" in response.text
-    assert "Filter: Outside work hours" in response.text
+    # New architecture: filter status is shown without "Filter:" prefix
+    assert "Outside work hours" in response.text
 
 
 @then("I should only see tides outside M-F 9am-5pm")
@@ -526,8 +527,8 @@ def check_only_outside_work_hours(response):
 @then("I should see all daylight tides including those during work hours")
 def check_all_daylight_tides(response):
     assert response.status_code == 200
-    # Check that filter status shows "All daylight"
-    assert "Filter: All daylight" in response.text
+    # New architecture: filter status is shown without "Filter:" prefix
+    assert "All daylight" in response.text
 
 
 @then(parsers.parse("the {day} {time} tide should be visible"))

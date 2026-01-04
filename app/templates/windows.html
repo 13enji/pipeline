@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Tide Window Finder - San Diego{% endblock %}
+
+{% block content %}
+<h1>Tide Window Finder - San Diego</h1>
+<p>Find times when the tide is below your target height</p>
+
+<form class="search-box" method="get" action="/windows">
+    <input type="hidden" name="units" value="{{ units }}">
+    <input type="hidden" name="work_filter" value="{{ work_filter }}">
+    <div class="filter-row">
+        <div class="form-group">
+            <label for="max_height">Tides below ({{ height_unit }})</label>
+            <input type="number" id="max_height" name="max_height" value="{{ display_height }}" step="0.1">
+        </div>
+        <div class="form-group">
+            <label for="min_duration">Min duration (min)</label>
+            <input type="number" id="min_duration" name="min_duration" value="{{ min_duration }}" step="1" min="0">
+        </div>
+        <div class="form-group">
+            <label for="days">Days ahead</label>
+            <select id="days" name="days">
+                <option value="30"{% if days == 30 %} selected{% endif %}>30</option>
+                <option value="60"{% if days == 60 %} selected{% endif %}>60</option>
+                <option value="90"{% if days == 90 %} selected{% endif %}>90</option>
+            </select>
+        </div>
+    </div>
+    <div class="toggle-row">
+        <div class="toggle-item">
+            <span class="toggle-label">Units: {{ 'm' if metric else 'ft' }}</span>
+            <a href="{{ units_toggle_url }}" class="toggle-link">{{ units_toggle_text }}</a>
+        </div>
+        <div class="toggle-item">
+            <span class="toggle-label">Showing: {{ work_filter_status }}</span>
+            <a href="{{ work_toggle_url }}" class="toggle-link">{{ work_toggle_text }}</a>
+        </div>
+    </div>
+    <button type="submit">Search</button>
+    <a href="/windows?reset=true" style="margin-left: 1rem; font-size: 0.9rem;">Reset to defaults</a>
+</form>
+
+<article>
+    <h2>Results</h2>
+    <p class="result-count">{{ windows | length }} window{{ 's' if windows | length != 1 else '' }} found</p>
+
+    {% if windows %}
+    <div class="window-list">
+        {% for w in windows %}
+        <div class="window-entry">
+            <div class="window-date">{{ w.formatted_date }}</div>
+            <div class="window-time">{{ w.formatted_time_range }}</div>
+            <div class="window-details">
+                <span class="window-duration">{{ w.duration_display }}</span>
+                <span class="window-height">Low: {{ w.min_height_display(metric) }}</span>
+                <span class="window-light">{{ w.relevant_light_display }}</span>
+                {% if w.weather %}
+                <span class="window-weather">
+                    <a href="{{ w.weather_url }}" target="_blank">{{ w.weather.temp_display(metric) }} {{ w.weather.precip_display() }}</a>
+                </span>
+                {% endif %}
+            </div>
+            <div class="window-noaa">
+                <a href="{{ w.noaa_url }}" target="_blank">View on NOAA</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-results">No tide windows match your criteria.</p>
+    {% endif %}
+</article>
+
+<p style="margin-top: 2rem;"><a href="/tides">Switch to Top Tides Dashboard</a></p>
+{% endblock %}

@@ -46,5 +46,29 @@
     "state": "CA",
     "latitude": 37.80630555555555,
     "longitude": -122.4658888888889
+  },
+  {
+    "station_id": "9410196",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Mission Bay, Campland",
+    "state": "CA",
+    "latitude": 32.793701171875,
+    "longitude": -117.22380065917969
+  },
+  {
+    "station_id": "9410580",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Newport Bay Entrance, Corona del Mar",
+    "state": "CA",
+    "latitude": 33.6033,
+    "longitude": -117.883
+  },
+  {
+    "station_id": "9410660",
+    "timezone_name": "America/Los_Angeles",
+    "name": "LOS ANGELES (Outer Harbor)",
+    "state": "CA",
+    "latitude": 33.72,
+    "longitude": -118.272
   }
 ]

@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Tidepooling.org - Find Your Next Tide Window{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    /* Search autocomplete styles */
+    .search-container {
+        position: relative;
+        max-width: 500px;
+        margin: 0 auto 2rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        background: white;
+        transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--pico-primary);
+    }
+
+    .search-input::placeholder {
+        color: #999;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .search-results.active {
+        display: block;
+    }
+
+    .search-result {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+    }
+
+    .search-result:last-child {
+        border-bottom: none;
+    }
+
+    .search-result:hover,
+    .search-result.highlighted {
+        background: #f5f5f5;
+    }
+
+    .search-result-name {
+        font-weight: 600;
+        color: var(--pico-primary);
+    }
+
+    .search-result-meta {
+        font-size: 0.875rem;
+        color: var(--pico-muted-color);
+    }
+
+    .search-result-match {
+        font-size: 0.8rem;
+        color: #999;
+        font-style: italic;
+    }
+
+    .search-no-results {
+        padding: 1rem;
+        color: var(--pico-muted-color);
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Find your next tide window</h1>
+    <p class="tagline">Discover the best times to explore Southern California's tide pools</p>
+
+    <!-- Search bar -->
+    <div class="search-container">
+        <input type="text"
+               class="search-input"
+               id="spot-search"
+               placeholder="Search for a tide pool..."
+               autocomplete="off"
+               aria-label="Search for a tide pool">
+        <div class="search-results" id="search-results"></div>
+    </div>
+</section>
+
+<!-- Recent locations (populated by JavaScript) -->
+<div class="recent-locations" id="recent-locations" style="display: none;">
+    <h3>Recently viewed</h3>
+    <div class="recent-list" id="recent-list"></div>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Location stats -->
+<p class="result-count">{{ total_count }} locations</p>
+
+<!-- Location grid -->
+<div class="location-grid">
+    {% for loc in locations %}
+    <a href="/spot/{{ loc.id }}" class="location-card{% if not loc.has_coordinates %} no-coords{% endif %}" data-location-id="{{ loc.id }}" data-location-name="{{ loc.name }}">
+        <h3>{{ loc.name }}</h3>
+        <p class="location-meta">{{ loc.city }}, {{ loc.county }} County</p>
+        {% if not loc.has_coordinates %}
+        <span class="unmapped-badge">Not on map</span>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Search data from server
+    var searchData = {{ search_json | safe }};
+
+    // Search functionality
+    var searchInput = document.getElementById('spot-search');
+    var searchResults = document.getElementById('search-results');
+    var highlightedIndex = -1;
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function searchSpots(query) {
+        if (!query || query.length < 2) {
+            return [];
+        }
+
+        var q = query.toLowerCase();
+        var results = [];
+
+        searchData.forEach(function(spot) {
+            var matchType = null;
+            var matchedOn = null;
+
+            // Check name
+            if (spot.name.toLowerCase().includes(q)) {
+                matchType = 'name';
+            }
+            // Check city
+            else if (spot.city.toLowerCase().includes(q)) {
+                matchType = 'city';
+                matchedOn = spot.city;
+            }
+            // Check aliases
+            else if (spot.aliases && spot.aliases.length > 0) {
+                for (var i = 0; i < spot.aliases.length; i++) {
+                    if (spot.aliases[i].toLowerCase().includes(q)) {
+                        matchType = 'alias';
+                        matchedOn = spot.aliases[i];
+                        break;
+                    }
+                }
+            }
+
+            if (matchType) {
+                results.push({
+                    id: spot.id,
+                    name: spot.name,
+                    city: spot.city,
+                    county: spot.county,
+                    matchType: matchType,
+                    matchedOn: matchedOn
+                });
+            }
+        });
+
+        // Sort: name matches first, then city, then alias
+        results.sort(function(a, b) {
+            var order = { name: 0, city: 1, alias: 2 };
+            return order[a.matchType] - order[b.matchType];
+        });
+
+        return results.slice(0, 8); // Limit to 8 results
+    }
+
+    function renderResults(results) {
+        if (results.length === 0) {
+            searchResults.innerHTML = '<div class="search-no-results">No spots found</div>';
+            searchResults.classList.add('active');
+            return;
+        }
+
+        var html = results.map(function(r, idx) {
+            var meta = r.city + ', ' + r.county + ' County';
+            var matchInfo = '';
+            if (r.matchType === 'alias') {
+                matchInfo = '<span class="search-result-match">Also known as: ' + escapeHtml(r.matchedOn) + '</span>';
+            } else if (r.matchType === 'city') {
+                matchInfo = '<span class="search-result-match">Matched on city</span>';
+            }
+
+            return '<a href="/spot/' + r.id + '" class="search-result" data-index="' + idx + '">' +
+                   '<div class="search-result-name">' + escapeHtml(r.name) + '</div>' +
+                   '<div class="search-result-meta">' + escapeHtml(meta) + '</div>' +
+                   matchInfo +
+                   '</a>';
+        }).join('');
+
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+        highlightedIndex = -1;
+    }
+
+    function hideResults() {
+        searchResults.classList.remove('active');
+        highlightedIndex = -1;
+    }
+
+    function updateHighlight() {
+        var items = searchResults.querySelectorAll('.search-result');
+        items.forEach(function(item, idx) {
+            if (idx === highlightedIndex) {
+                item.classList.add('highlighted');
+            } else {
+                item.classList.remove('highlighted');
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', function() {
+        var query = this.value.trim();
+        if (query.length < 2) {
+            hideResults();
+            return;
+        }
+        var results = searchSpots(query);
+        renderResults(results);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        var items = searchResults.querySelectorAll('.search-result');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+            updateHighlight();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, -1);
+            updateHighlight();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                items[highlightedIndex].click();
+            }
+        } else if (e.key === 'Escape') {
+            hideResults();
+            searchInput.blur();
+        }
+    });
+
+    // Hide results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            hideResults();
+        }
+    });
+
+    // Save to recent when clicking a search result
+    searchResults.addEventListener('click', function(e) {
+        var result = e.target.closest('.search-result');
+        if (result) {
+            var id = result.getAttribute('href').replace('/spot/', '');
+            var name = result.querySelector('.search-result-name').textContent;
+            saveRecentLocation(id, name);
+        }
+    });
+
+    // Initialize map centered on Southern California
+    var map = L.map('map').setView([33.2, -117.4], 9);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Location markers data from server
+    var locations = {{ markers_json | safe }};
+
+    // Add markers
+    locations.forEach(function(loc) {
+        var marker = L.marker([loc.lat, loc.lon]).addTo(map);
+        marker.bindPopup(
+            '<div class="popup-name">' + loc.name + '</div>' +
+            '<a href="/spot/' + loc.id + '" class="popup-link">View Details</a>'
+        );
+    });
+
+    // Fit map to show all markers if there are any
+    if (locations.length > 0) {
+        var group = L.featureGroup(locations.map(function(loc) {
+            return L.marker([loc.lat, loc.lon]);
+        }));
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+
+    // Recent locations from localStorage
+    function getRecentLocations() {
+        try {
+            return JSON.parse(localStorage.getItem('recentLocations') || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveRecentLocation(id, name) {
+        var recent = getRecentLocations();
+        // Remove if already exists
+        recent = recent.filter(function(loc) { return loc.id !== id; });
+        // Add to front
+        recent.unshift({ id: id, name: name });
+        // Keep only last 5
+        recent = recent.slice(0, 5);
+        localStorage.setItem('recentLocations', JSON.stringify(recent));
+    }
+
+    function displayRecentLocations() {
+        var recent = getRecentLocations();
+        if (recent.length === 0) return;
+
+        var container = document.getElementById('recent-locations');
+        var list = document.getElementById('recent-list');
+
+        container.style.display = 'block';
+        list.innerHTML = recent.map(function(loc) {
+            return '<a href="/spot/' + loc.id + '" class="recent-chip">' + loc.name + '</a>';
+        }).join('');
+    }
+
+    // Track clicks on location cards
+    document.querySelectorAll('.location-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            var id = this.dataset.locationId;
+            var name = this.dataset.locationName;
+            saveRecentLocation(id, name);
+        });
+    });
+
+    // Display recent locations on page load
+    displayRecentLocations();
+</script>
+{% endblock %}

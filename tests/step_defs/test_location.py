@@ -13,7 +13,8 @@ from app.services.stations import Station, StationWithDistance
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    # follow_redirects=True to handle new architecture redirects
+    return TestClient(app, follow_redirects=True)
 
 
 # Mock data for testing

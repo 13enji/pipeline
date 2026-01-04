@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tidepooling.org{% endblock %}</title>
+
+    <!-- Pico CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+    <!-- Nunito font for headings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <nav class="container">
+            <ul>
+                <li><a href="/" class="site-logo"><strong>Tidepooling.org</strong></a></li>
+            </ul>
+            <ul>
+                <li><a href="/">Explore</a></li>
+                <li><a href="/learn">Learn</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="container">
+        <hr>
+        <p class="footer-text">
+            Made with care for tidepoolers everywhere.
+            <a href="/tides">Tide Dashboard</a> &middot;
+            <a href="/cache-stats">Cache Stats</a>
+        </p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

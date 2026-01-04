@@ -14,5 +14,37 @@
     "state": "",
     "latitude": 33.416666666667005,
     "longitude": -117.61666666666996
+  },
+  {
+    "station_id": "9410230",
+    "timezone_name": "America/Los_Angeles",
+    "name": "La Jolla (Scripps Institution Wharf)",
+    "state": "CA",
+    "latitude": 32.86688888888889,
+    "longitude": -117.2571388888889
+  },
+  {
+    "station_id": "TWC0413",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Quivira Basin, Mission Bay",
+    "state": "",
+    "latitude": 32.76666666666701,
+    "longitude": -117.23333333333005
+  },
+  {
+    "station_id": "9410196",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Mission Bay, Campland",
+    "state": "CA",
+    "latitude": 32.793701171875,
+    "longitude": -117.22380065917969
+  },
+  {
+    "station_id": "9410580",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Newport Bay Entrance, Corona del Mar",
+    "state": "CA",
+    "latitude": 33.6033,
+    "longitude": -117.883
   }
 ]

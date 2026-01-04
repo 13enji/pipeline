@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Tide Dashboard - San Diego{% endblock %}
+
+{% block content %}
+<h1>Tide Dashboard - San Diego</h1>
+<p>Top 3 highest and lowest tides during daylight hours</p>
+
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ units_toggle_url }}" role="button" class="outline">{{ units_toggle_text }}</a>
+    <span style="margin-left: 0.5rem; color: var(--pico-muted-color);">Current: {{ 'm' if metric else 'ft' }}</span>
+
+    <a href="{{ work_toggle_url }}" role="button" class="outline" style="margin-left: 1rem;">{{ work_toggle_text }}</a>
+    <span style="margin-left: 0.5rem; color: var(--pico-muted-color);">{{ work_filter_status }}</span>
+</div>
+
+<div class="tide-cards">
+    {% for card in cards %}
+    <div class="tide-card">
+        <h2>{{ card.period_days }} Day Forecast</h2>
+        <div class="tide-columns">
+            <div class="tide-column">
+                <h3>Highest Tides</h3>
+                {% for tide in card.highest_tides %}
+                <div class="tide-entry">
+                    <div class="tide-date">{{ tide.formatted_date }}</div>
+                    <div class="tide-time">{{ tide.formatted_time }}</div>
+                    <div class="tide-twilight">
+                        <span class="twilight-label">{{ tide.twilight_label }}</span>
+                        <span class="twilight-time">{{ tide.twilight_time }}</span>
+                    </div>
+                    <div class="tide-height">{{ tide.height_display(metric) }}</div>
+                </div>
+                {% endfor %}
+                {% if card.highest_count_limited %}
+                <p class="limited-msg">Only {{ card.highest_tides | length }} tide{{ 's' if card.highest_tides | length != 1 else '' }} match filter</p>
+                {% endif %}
+            </div>
+            <div class="tide-column">
+                <h3>Lowest Tides</h3>
+                {% for tide in card.lowest_tides %}
+                <div class="tide-entry">
+                    <div class="tide-date">{{ tide.formatted_date }}</div>
+                    <div class="tide-time">{{ tide.formatted_time }}</div>
+                    <div class="tide-twilight">
+                        <span class="twilight-label">{{ tide.twilight_label }}</span>
+                        <span class="twilight-time">{{ tide.twilight_time }}</span>
+                    </div>
+                    <div class="tide-height">{{ tide.height_display(metric) }}</div>
+                </div>
+                {% endfor %}
+                {% if card.lowest_count_limited %}
+                <p class="limited-msg">Only {{ card.lowest_tides | length }} tide{{ 's' if card.lowest_tides | length != 1 else '' }} match filter</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<p style="margin-top: 2rem;">
+    <a href="/windows">Switch to Tide Window Finder</a> |
+    <a href="{{ noaa_url }}" target="_blank">View on NOAA</a>
+</p>
+{% endblock %}
