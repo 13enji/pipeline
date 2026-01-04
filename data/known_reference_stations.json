@@ -24,36 +24,20 @@
     "longitude": -80.87
   },
   {
-    "station_id": "9410230",
-    "timezone_name": "America/Los_Angeles",
-    "name": "La Jolla (Scripps Institution Wharf)",
-    "state": "CA",
-    "latitude": 32.86688888888889,
-    "longitude": -117.2571388888889
-  },
-  {
-    "station_id": "9413651",
-    "timezone_name": "America/Los_Angeles",
-    "name": "Kirby Park, Elkhorn Slough",
-    "state": "CA",
-    "latitude": 36.84130096435547,
-    "longitude": -121.74530029296875
-  },
-  {
-    "station_id": "9414290",
-    "timezone_name": "America/Los_Angeles",
-    "name": "SAN FRANCISCO (Golden Gate)",
-    "state": "CA",
-    "latitude": 37.80630555555555,
-    "longitude": -122.4658888888889
-  },
-  {
     "station_id": "9410196",
     "timezone_name": "America/Los_Angeles",
     "name": "Mission Bay, Campland",
     "state": "CA",
     "latitude": 32.793701171875,
     "longitude": -117.22380065917969
+  },
+  {
+    "station_id": "9410230",
+    "timezone_name": "America/Los_Angeles",
+    "name": "La Jolla (Scripps Institution Wharf)",
+    "state": "CA",
+    "latitude": 32.86688888888889,
+    "longitude": -117.2571388888889
   },
   {
     "station_id": "9410580",
@@ -70,5 +54,21 @@
     "state": "CA",
     "latitude": 33.72,
     "longitude": -118.272
+  },
+  {
+    "station_id": "9413651",
+    "timezone_name": "America/Los_Angeles",
+    "name": "Kirby Park, Elkhorn Slough",
+    "state": "CA",
+    "latitude": 36.84130096435547,
+    "longitude": -121.74530029296875
+  },
+  {
+    "station_id": "9414290",
+    "timezone_name": "America/Los_Angeles",
+    "name": "SAN FRANCISCO (Golden Gate)",
+    "state": "CA",
+    "latitude": 37.80630555555555,
+    "longitude": -122.4658888888889
   }
 ]
